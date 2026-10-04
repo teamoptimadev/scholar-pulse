@@ -76,6 +76,14 @@ def build_features_from_enrollment(
         "current_failed_courses": failed,
         "low_performance_course_count": low_perf,
         "performance_trend": trend,
+        "attendance_percentage_raw": enrollment.attendance_percentage,
+        "study_hours_per_week_raw": enrollment.study_hours_per_week,
+        "assignment_completion_percentage_raw": enrollment.assignment_completion_pct,
+        "previous_cgpa_raw": semester_result.cgpa if semester_result else None,
+        "backlog_count_raw": semester_result.backlog_count if semester_result else None,
+        "current_failed_courses_raw": semester_result.current_failed_courses if semester_result else None,
+        "low_performance_course_count_raw": semester_result.low_performance_course_count if semester_result else None,
+        "performance_trend_raw": semester_result.performance_trend if semester_result else None,
     }
 
 
@@ -130,4 +138,12 @@ def build_features_from_student(
         "current_failed_courses": semester_result.current_failed_courses if semester_result else 0,
         "low_performance_course_count": semester_result.low_performance_course_count if semester_result else 0,
         "performance_trend": semester_result.performance_trend if semester_result else "STABLE",
+        "attendance_percentage_raw": None,
+        "study_hours_per_week_raw": None,
+        "assignment_completion_percentage_raw": None,
+        "previous_cgpa_raw": semester_result.cgpa if semester_result else None,
+        "backlog_count_raw": semester_result.backlog_count if semester_result else None,
+        "current_failed_courses_raw": semester_result.current_failed_courses if semester_result else None,
+        "low_performance_course_count_raw": semester_result.low_performance_course_count if semester_result else None,
+        "performance_trend_raw": semester_result.performance_trend if semester_result else None,
     }

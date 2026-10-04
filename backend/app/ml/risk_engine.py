@@ -73,6 +73,28 @@ def _classify_risk_level(score: float, thresholds: dict) -> str:
     return "HIGH"
 
 
+def _get_feature_value(features: dict[str, Any], feature: str) -> Any:
+    raw_key = f"{feature}_raw"
+    if raw_key in features:
+        return features[raw_key]
+    return features.get(feature)
+
+
+def compute_data_completeness(features: dict[str, Any], config: dict[str, Any]) -> float:
+    weights = config["feature_weights"]
+    total_weight = sum(weights.values())
+    if total_weight == 0:
+        return 1.0
+
+    present_weight = 0.0
+    for feature, weight in weights.items():
+        value = _get_feature_value(features, feature)
+        if value is not None:
+            present_weight += weight
+
+    return round(present_weight / total_weight, 2)
+
+
 def calculate_risk_score(features: dict[str, Any]) -> float:
     """Calculate weighted risk score (0–100) from features."""
     if not model_loader.is_loaded:
@@ -84,7 +106,7 @@ def calculate_risk_score(features: dict[str, Any]) -> float:
 
     score = 0.0
     for feature, weight in weights.items():
-        value = features.get(feature)
+        value = _get_feature_value(features, feature)
         feature_rules = rules.get(feature, {})
         sub_score = _score_feature(value, feature_rules)
         score += sub_score * weight * 100
@@ -96,5 +118,6 @@ def predict_risk(features: dict[str, Any]) -> dict[str, Any]:
     """Calculate risk score and level from features."""
     config = model_loader.risk_config
     score = calculate_risk_score(features)
+    completeness = compute_data_completeness(features, config)
     level = _classify_risk_level(score, config["risk_thresholds"])
-    return {"risk_score": score, "risk_level": level}
+    return {"risk_score": score, "risk_level": level, "data_completeness": completeness}
