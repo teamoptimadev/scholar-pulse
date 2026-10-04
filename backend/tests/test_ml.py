@@ -97,6 +97,24 @@ class TestModel3Risk:
         assert result["data_completeness"] == 0.0
         assert result["risk_score"] == 25.0
         assert result["risk_level"] != "HIGH"
+        
+        top_factors = result.get("top_factors", [])
+        assert len(top_factors) <= 3
+        
+        # Check that is_missing is true for at least one of these two
+        # and value is None
+        attendance_tf = next((tf for tf in top_factors if tf["feature"] == "attendance_percentage"), None)
+        cgpa_tf = next((tf for tf in top_factors if tf["feature"] == "previous_cgpa"), None)
+        
+        if attendance_tf:
+            assert attendance_tf["is_missing"] is True
+            assert attendance_tf["value"] is None
+        if cgpa_tf:
+            assert cgpa_tf["is_missing"] is True
+            assert cgpa_tf["value"] is None
+        
+        # At least one must be in top 3 since they contribute 10 points each (highest)
+        assert attendance_tf or cgpa_tf
 
     def test_risk_missing_cgpa_score(self):
         from app.ml.risk_engine import predict_risk
@@ -116,6 +134,68 @@ class TestModel3Risk:
         # previous_cgpa None -> 'missing' -> score 0.5 -> weight 0.2 -> 10 score contribution
         assert res_none["risk_score"] < res_zero["risk_score"]
         assert res_none["data_completeness"] == 0.8  # missing 0.2 weight
+
+
+    def test_risk_full_record_top_factors(self):
+        from app.ml.risk_engine import predict_risk
+        features = {
+            "attendance_percentage": 50, "previous_cgpa": 4.5, "backlog_count": 4,
+            "current_failed_courses": 3, "low_performance_course_count": 4,
+            "study_hours_per_week": 5, "assignment_completion_percentage": 30,
+            "performance_trend": "DECLINING",
+        }
+        result = predict_risk(features)
+        top_factors = result.get("top_factors", [])
+        assert len(top_factors) > 0
+        for tf in top_factors:
+            assert tf["is_missing"] is False
+
+    def test_risk_contribution_sum(self):
+        from app.ml.model_loader import model_loader
+        from app.ml.risk_engine import calculate_risk_score, compute_feature_contributions
+        
+        features_cases = [
+            {
+                "attendance_percentage": 50, "previous_cgpa": 4.5, "backlog_count": 4,
+                "current_failed_courses": 3, "low_performance_course_count": 4,
+                "study_hours_per_week": 5, "assignment_completion_percentage": 30,
+                "performance_trend": "DECLINING",
+            },
+            {
+                "attendance_percentage": None, "previous_cgpa": None, "backlog_count": None,
+                "current_failed_courses": None, "low_performance_course_count": None,
+                "study_hours_per_week": None, "assignment_completion_percentage": None,
+                "performance_trend": None,
+            }
+        ]
+        
+        config = model_loader.risk_config
+        for f in features_cases:
+            score = calculate_risk_score(f)
+            contributions = compute_feature_contributions(f, config)
+            c_sum = sum(c["contribution"] for c in contributions)
+            assert abs(c_sum - score) < 0.01
+
+    def test_get_top_factors_endpoint_style(self):
+        from app.ml.model_loader import model_loader
+        from app.ml.risk_engine import get_top_factors
+        
+        # stored-style feature dict (including *_raw null values)
+        features = {
+            "attendance_percentage_raw": None,
+            "previous_cgpa_raw": None,
+            "attendance_percentage": 0.0,
+            "previous_cgpa": 0.0,
+            "backlog_count": 0,
+        }
+        
+        config = model_loader.risk_config
+        top_factors = get_top_factors(features, config)
+        assert len(top_factors) > 0
+        assert len(top_factors) <= 3
+        
+        # The endpoint itself (predict_for_student in api/v1/routes/predictions.py) is not exercised
+        # here to avoid building new database infrastructure. This tests the core extraction logic it relies on.
 
 
 class TestRecommendations:

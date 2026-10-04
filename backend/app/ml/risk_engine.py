@@ -95,21 +95,49 @@ def compute_data_completeness(features: dict[str, Any], config: dict[str, Any]) 
     return round(present_weight / total_weight, 2)
 
 
+def compute_feature_contributions(features: dict[str, Any], config: dict[str, Any]) -> list[dict[str, Any]]:
+    weights = config["feature_weights"]
+    rules = config["scoring_rules"]
+    contributions = []
+    
+    for feature, weight in weights.items():
+        value = _get_feature_value(features, feature)
+        feature_rules = rules.get(feature, {})
+        sub_score = _score_feature(value, feature_rules)
+        contribution = sub_score * weight * 100
+        
+        is_missing = value is None
+        
+        contributions.append({
+            "feature": feature,
+            "contribution": contribution,
+            "value": value,
+            "is_missing": is_missing
+        })
+    return contributions
+
+
+def get_top_factors(features: dict[str, Any], config: dict[str, Any], n: int = 3) -> list[dict[str, Any]]:
+    contributions = compute_feature_contributions(features, config)
+    valid_contributions = [c for c in contributions if c["contribution"] > 0]
+    valid_contributions.sort(key=lambda x: x["contribution"], reverse=True)
+    
+    top_factors = []
+    for c in valid_contributions[:n]:
+        c_copy = c.copy()
+        c_copy["contribution"] = round(c_copy["contribution"], 2)
+        top_factors.append(c_copy)
+    return top_factors
+
+
 def calculate_risk_score(features: dict[str, Any]) -> float:
     """Calculate weighted risk score (0–100) from features."""
     if not model_loader.is_loaded:
         raise RuntimeError("ML models not loaded")
 
     config = model_loader.risk_config
-    weights = config["feature_weights"]
-    rules = config["scoring_rules"]
-
-    score = 0.0
-    for feature, weight in weights.items():
-        value = _get_feature_value(features, feature)
-        feature_rules = rules.get(feature, {})
-        sub_score = _score_feature(value, feature_rules)
-        score += sub_score * weight * 100
+    contributions = compute_feature_contributions(features, config)
+    score = sum(c["contribution"] for c in contributions)
 
     return round(score, 2)
 
@@ -120,4 +148,10 @@ def predict_risk(features: dict[str, Any]) -> dict[str, Any]:
     score = calculate_risk_score(features)
     completeness = compute_data_completeness(features, config)
     level = _classify_risk_level(score, config["risk_thresholds"])
-    return {"risk_score": score, "risk_level": level, "data_completeness": completeness}
+    top_factors = get_top_factors(features, config)
+    return {
+        "risk_score": score,
+        "risk_level": level,
+        "data_completeness": completeness,
+        "top_factors": top_factors,
+    }

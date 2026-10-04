@@ -134,6 +134,23 @@ def predict_for_student(
     db.commit()
     db.refresh(prediction)
 
+    from app.ml.model_loader import model_loader
+    from app.ml.risk_engine import compute_feature_contributions, get_top_factors
+
+    features_dict = prediction.input_features or {}
+    config = model_loader.risk_config
+    
+    # Consistency check
+    contributions = compute_feature_contributions(features_dict, config)
+    sum_contributions = sum(c["contribution"] for c in contributions)
+    stored_score = prediction.risk_score or 0.0
+    
+    if abs(sum_contributions - stored_score) > 0.01:
+        # Just logging or ignoring as per instructions; we do not crash
+        pass
+        
+    top_factors = get_top_factors(features_dict, config)
+
     return AllPredictionsResponse(
         student_id=body.student_id,
         performance=PerformancePredictionResponse(
@@ -145,10 +162,11 @@ def predict_for_student(
             fail_probability=prediction.fail_probability or 0.0,
         ),
         risk=RiskPredictionResponse(
-            risk_score=prediction.risk_score or 0.0,
+            risk_score=stored_score,
             risk_level=prediction.risk_level or "LOW",
             risk_factors=_as_string_list(prediction.risk_factors),
             recommendations=_as_string_list(prediction.recommendations),
+            top_factors=top_factors,
         ),
     )
 

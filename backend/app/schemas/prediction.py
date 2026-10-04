@@ -55,12 +55,20 @@ class PassFailPredictionResponse(BaseModel):
     fail_probability: float
 
 
+class RiskFactor(BaseModel):
+    feature: str
+    contribution: float
+    value: float | None = None
+    is_missing: bool
+
+
 class RiskPredictionResponse(BaseModel):
     risk_score: float
     risk_level: str
     risk_factors: list[str]
     recommendations: list[str]
     data_completeness: float = Field(default=1.0)
+    top_factors: list[RiskFactor] = Field(default_factory=list)
 
 
 class AllPredictionsResponse(BaseModel):
