@@ -76,6 +76,47 @@ class TestModel3Risk:
         assert result["risk_score"] > 38
         assert result["risk_level"] == "HIGH"
 
+    def test_risk_fresher_cold_start(self):
+        from app.ml.risk_engine import predict_risk
+        # Simulate a fresher with all Risk features missing. We simulate it via `_raw` to bypass API defaults.
+        # But for predict_risk, we can just pass them as None directly since the API allows it now.
+        features = {
+            "attendance_percentage": None, "previous_cgpa": None, "backlog_count": None,
+            "current_failed_courses": None, "low_performance_course_count": None,
+            "study_hours_per_week": None, "assignment_completion_percentage": None,
+            "performance_trend": None,
+        }
+        result = predict_risk(features)
+        
+        # Calculate expected score:
+        # attendance(0.5)*0.2 + cgpa(0.5)*0.2 + backlog(0.0)*0.2 + failed(0.0)*0.15 + low(0.0)*0.1 + study(0.5)*0.05 + assign(0.5)*0.05 + trend(0.0)*0.05
+        # = 0.1 + 0.1 + 0 + 0 + 0 + 0.025 + 0.025 + 0 = 0.25 -> 25.0 risk score (MEDIUM)
+        
+        print(f"Fresher Risk Score: {result['risk_score']}, Level: {result['risk_level']}")
+        
+        assert result["data_completeness"] == 0.0
+        assert result["risk_score"] == 25.0
+        assert result["risk_level"] != "HIGH"
+
+    def test_risk_missing_cgpa_score(self):
+        from app.ml.risk_engine import predict_risk
+        features_zero = {
+            "attendance_percentage": 90, "previous_cgpa": 0.0, "backlog_count": 0,
+            "current_failed_courses": 0, "low_performance_course_count": 0,
+            "study_hours_per_week": 25, "assignment_completion_percentage": 95,
+            "performance_trend": "IMPROVING",
+        }
+        features_none = features_zero.copy()
+        features_none["previous_cgpa"] = None
+
+        res_zero = predict_risk(features_zero)
+        res_none = predict_risk(features_none)
+
+        # previous_cgpa 0.0 -> '<5' -> score 1.0 -> weight 0.2 -> 20 score contribution
+        # previous_cgpa None -> 'missing' -> score 0.5 -> weight 0.2 -> 10 score contribution
+        assert res_none["risk_score"] < res_zero["risk_score"]
+        assert res_none["data_completeness"] == 0.8  # missing 0.2 weight
+
 
 class TestRecommendations:
     def test_recommendations_generated(self):

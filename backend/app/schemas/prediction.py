@@ -35,14 +35,14 @@ class PassFailFeatures(BaseModel):
 
 
 class RiskFeatures(BaseModel):
-    attendance_percentage: float = Field(..., ge=0, le=100)
-    previous_cgpa: float = Field(..., ge=0, le=10)
-    backlog_count: int = Field(..., ge=0)
-    current_failed_courses: int = Field(..., ge=0)
-    low_performance_course_count: int = Field(..., ge=0)
-    study_hours_per_week: float = Field(..., ge=0, le=60)
-    assignment_completion_percentage: float = Field(..., ge=0, le=100)
-    performance_trend: str = Field(default="STABLE")
+    attendance_percentage: float | None = Field(default=None, ge=0, le=100)
+    previous_cgpa: float | None = Field(default=None, ge=0, le=10)
+    backlog_count: int | None = Field(default=None, ge=0)
+    current_failed_courses: int | None = Field(default=None, ge=0)
+    low_performance_course_count: int | None = Field(default=None, ge=0)
+    study_hours_per_week: float | None = Field(default=None, ge=0, le=60)
+    assignment_completion_percentage: float | None = Field(default=None, ge=0, le=100)
+    performance_trend: str | None = Field(default=None)
 
 
 class PerformancePredictionResponse(BaseModel):
@@ -60,6 +60,7 @@ class RiskPredictionResponse(BaseModel):
     risk_level: str
     risk_factors: list[str]
     recommendations: list[str]
+    data_completeness: float = Field(default=1.0)
 
 
 class AllPredictionsResponse(BaseModel):
