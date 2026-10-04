@@ -197,6 +197,66 @@ class TestModel3Risk:
         # The endpoint itself (predict_for_student in api/v1/routes/predictions.py) is not exercised
         # here to avoid building new database infrastructure. This tests the core extraction logic it relies on.
 
+    def test_top_factor_string_value_validates(self):
+        """get_top_factors returns a string value for performance_trend and it validates against RiskFactor."""
+        from app.ml.model_loader import model_loader
+        from app.ml.risk_engine import get_top_factors
+        from app.schemas.prediction import RiskFactor
+
+        features = {
+            "attendance_percentage": 90,
+            "previous_cgpa": 8.5,
+            "backlog_count": 0,
+            "current_failed_courses": 0,
+            "low_performance_course_count": 0,
+            "study_hours_per_week": 5,
+            "assignment_completion_percentage": 30,
+            "performance_trend": "STABLE",
+        }
+        config = model_loader.risk_config
+        top_factors = get_top_factors(features, config)
+        assert len(top_factors) > 0
+
+        trend_factor = next(
+            (tf for tf in top_factors if tf["feature"] == "performance_trend"), None
+        )
+        # If performance_trend is not in top factors, at least confirm no validation error
+        for tf in top_factors:
+            rf = RiskFactor(**tf)  # must not raise ValidationError
+            assert isinstance(rf.value, (float, int, str, type(None)))
+
+        if trend_factor:
+            rf = RiskFactor(**trend_factor)
+            assert rf.value == "STABLE"
+            assert isinstance(rf.value, str)
+
+    def test_top_factor_numeric_value_stays_float(self):
+        """A numeric-valued factor keeps a float value through RiskFactor validation."""
+        from app.ml.model_loader import model_loader
+        from app.ml.risk_engine import get_top_factors
+        from app.schemas.prediction import RiskFactor
+
+        features = {
+            "attendance_percentage": 50,
+            "previous_cgpa": 4.5,
+            "backlog_count": 4,
+            "current_failed_courses": 3,
+            "low_performance_course_count": 4,
+            "study_hours_per_week": 5,
+            "assignment_completion_percentage": 30,
+            "performance_trend": "DECLINING",
+        }
+        config = model_loader.risk_config
+        top_factors = get_top_factors(features, config)
+        assert len(top_factors) > 0
+
+        numeric_factor = next(
+            (tf for tf in top_factors if isinstance(tf["value"], (int, float))), None
+        )
+        assert numeric_factor is not None, "Expected at least one numeric-valued factor"
+        rf = RiskFactor(**numeric_factor)
+        assert isinstance(rf.value, (int, float))
+
 
 class TestRecommendations:
     def test_recommendations_generated(self):

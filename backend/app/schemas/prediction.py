@@ -58,7 +58,7 @@ class PassFailPredictionResponse(BaseModel):
 class RiskFactor(BaseModel):
     feature: str
     contribution: float
-    value: float | None = None
+    value: float | str | None = None
     is_missing: bool
 
 
