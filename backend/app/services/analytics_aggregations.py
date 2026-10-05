@@ -10,13 +10,13 @@ from sqlalchemy.orm import Session
 
 from app.api.v1.analytics_filters import AnalyticsFilterParams
 from app.api.v1.helpers import parse_uuid
+from app.models.course import Course
 from app.models.department import Department
 from app.models.enrollment import CourseResult, Enrollment, SemesterResult
 from app.models.prediction import PredictionResult
 from app.models.semester import Semester
 from app.models.student import Student
 from app.models.user import User
-from app.models.course import Course
 from app.schemas.analytics import (
     ActualVsPredictedPoint,
     AttendancePerformancePoint,

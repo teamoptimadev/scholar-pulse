@@ -6,7 +6,12 @@ import html
 import math
 from typing import Sequence
 
-from app.schemas.analytics import ChartBucket, DepartmentAnalytics, DepartmentRiskStack, RiskDistribution
+from app.schemas.analytics import (
+    ChartBucket,
+    DepartmentAnalytics,
+    DepartmentRiskStack,
+    RiskDistribution,
+)
 from app.schemas.report import ReportContext
 
 COLORS = {
@@ -139,7 +144,6 @@ def svg_stacked_bar_chart(title: str, stacks: Sequence[DepartmentRiskStack]) -> 
 
     for index, stack in enumerate(stacks):
         x = chart_left + index * (bar_width + bar_gap)
-        total = stack.low + stack.medium + stack.high
         y_cursor = chart_bottom
         for value, color in (
             (stack.low, COLORS["low"]),

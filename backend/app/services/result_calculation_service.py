@@ -176,7 +176,7 @@ def recalculate_semester_result(
 
     # CGPA across all semesters up to and including this one
     semester = db.query(Semester).filter(Semester.id == semester_id).first()
-    all_semester_results = (
+    (
         db.query(SemesterResult)
         .join(Semester, SemesterResult.semester_id == Semester.id)
         .filter(

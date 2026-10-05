@@ -8,9 +8,8 @@ from sqlalchemy.orm import Session, joinedload
 
 from app.models.course import Course
 from app.models.enrollment import Assessment, AssessmentMark, Enrollment
-from app.models.program import Program
-from app.models.semester import Semester
 from app.models.student import Student
+
 STANDARD_ASSESSMENTS: list[tuple[str, str, int]] = [
     ("Continuous Assessment", "CA", 100),
     ("Mid-Term Exam", "MID", 100),

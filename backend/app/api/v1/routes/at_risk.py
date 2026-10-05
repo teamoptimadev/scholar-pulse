@@ -101,9 +101,8 @@ def _apply_at_risk_filters(
     attendance_band: str | None,
     cgpa_band: str | None,
 ):
-    from sqlalchemy import func
-
     from app.models.department import Department
+    from sqlalchemy import func
 
     if department_name:
         query = query.join(Department, Student.department_id == Department.id).filter(

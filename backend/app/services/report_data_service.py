@@ -5,7 +5,6 @@ from __future__ import annotations
 import uuid
 from datetime import UTC, datetime
 
-from sqlalchemy import func
 from sqlalchemy.orm import Session
 
 from app.api.v1.analytics_filters import AnalyticsFilterParams

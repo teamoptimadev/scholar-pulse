@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import random
-from datetime import date
 
 from app.core.security import hash_password
 from app.core.seed_data import (
@@ -143,7 +142,7 @@ def seed_demo_university(db, scale: int = 500) -> Institution:
     db.add(institution)
     db.flush()
 
-    admin_user = _create_user(db, institution.id, ADMIN_EMAIL, ADMIN_PASSWORD, "institution_admin")
+    _create_user(db, institution.id, ADMIN_EMAIL, ADMIN_PASSWORD, "institution_admin")
     faculty_user = _create_user(db, institution.id, FACULTY_EMAIL, FACULTY_PASSWORD, "faculty")
     parent_user = _create_user(db, institution.id, PARENT_EMAIL, PARENT_PASSWORD, "parent")
 

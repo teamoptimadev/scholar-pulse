@@ -7,9 +7,9 @@ from app.api.v1.analytics_filters import AnalyticsFilterParams, analytics_filter
 from app.schemas.report import ReportContext
 from app.services.analytics_aggregations import get_scoped_ids
 from app.services.authorization_service import assert_student_access
+from app.services.pdf_service import render_pdf
 from app.services.report_data_service import build_report_context
 from app.services.report_filename import build_report_filename
-from app.services.pdf_service import render_pdf
 from app.services.report_service import (
     generate_at_risk_report,
     generate_institutional_report,

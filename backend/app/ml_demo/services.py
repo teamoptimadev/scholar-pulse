@@ -12,7 +12,6 @@ import pandas as pd
 from app.core.config import settings
 from app.ml.model_loader import model_loader
 from app.ml.risk_engine import _score_feature
-
 from app.ml_demo.constants import (
     ALGORITHM_COMPARISONS,
     DATASET_MODEL_NOTES,

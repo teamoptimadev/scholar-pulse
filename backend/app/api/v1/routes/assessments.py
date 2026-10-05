@@ -18,10 +18,10 @@ from app.schemas.academic import (
     MarksRosterResponse,
     RosterStudentRow,
 )
-from app.services.marks_entry_service import build_marks_grid
-from app.services.result_calculation_service import recalculate_after_marks_save
 from app.schemas.common import PaginatedResponse, PaginationParams
 from app.services.authorization_service import assert_enrollment_access
+from app.services.marks_entry_service import build_marks_grid
+from app.services.result_calculation_service import recalculate_after_marks_save
 from fastapi import APIRouter, HTTPException, Query, status
 from sqlalchemy.exc import IntegrityError
 
@@ -362,8 +362,8 @@ def _process_bulk_marks(
         db.refresh(mark)
 
     if trigger_predictions and affected_enrollment_ids:
-        from app.services.prediction_storage_service import store_student_prediction
         from app.models.enrollment import Enrollment
+        from app.services.prediction_storage_service import store_student_prediction
 
         student_ids: set = set()
         for eid in affected_enrollment_ids:

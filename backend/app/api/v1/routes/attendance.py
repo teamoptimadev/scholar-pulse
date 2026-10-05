@@ -3,8 +3,8 @@
 from app.api.deps import AdminOrFacultyUser, DbSession
 from app.api.v1.helpers import PaginationDep, get_entity_or_404, parse_uuid
 from app.api.v1.pagination import paginate, paginated_response
-from app.models.enrollment import Attendance, Enrollment
 from app.models.course import Course
+from app.models.enrollment import Attendance, Enrollment
 from app.schemas.academic import (
     AttendanceCreate,
     AttendanceResponse,
@@ -14,11 +14,10 @@ from app.schemas.academic import (
     BulkAttendanceRequest,
     EnrollmentResponse,
 )
-from app.services.marks_entry_service import filter_enrollments_query
-from fastapi import Query
 from app.schemas.common import PaginatedResponse, PaginationParams
 from app.services.authorization_service import assert_enrollment_access, assert_student_access
-from fastapi import APIRouter, HTTPException, status
+from app.services.marks_entry_service import filter_enrollments_query
+from fastapi import APIRouter, HTTPException, Query, status
 from sqlalchemy.exc import IntegrityError
 
 router = APIRouter(prefix="/attendance", tags=["attendance"])

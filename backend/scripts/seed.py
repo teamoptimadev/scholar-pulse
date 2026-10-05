@@ -7,6 +7,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 from app.core.database import SessionLocal
+from app.core.security import hash_password
 from app.core.seed_data import (
     ADMIN_2_EMAIL,
     ADMIN_2_PASSWORD,
@@ -22,7 +23,6 @@ from app.core.seed_data import (
     STUDENT_PASSWORD,
     STUDENT_ROLLS,
 )
-from app.core.security import hash_password
 from app.models.academic_year import AcademicYear
 from app.models.course import Course
 from app.models.department import Department
@@ -217,7 +217,7 @@ def _seed_institution_1(db):
     db.add(semester)
     db.flush()
 
-    admin_user = _create_user(db, institution.id, ADMIN_EMAIL, ADMIN_PASSWORD, "institution_admin")
+    _create_user(db, institution.id, ADMIN_EMAIL, ADMIN_PASSWORD, "institution_admin")
     faculty_user = _create_user(db, institution.id, FACULTY_EMAIL, FACULTY_PASSWORD, "faculty")
     parent_user = _create_user(db, institution.id, PARENT_EMAIL, PARENT_PASSWORD, "parent")
 
@@ -371,7 +371,7 @@ def _seed_institution_2(db):
     db.add(dept)
     db.flush()
 
-    admin_user = _create_user(
+    _create_user(
         db, institution.id, ADMIN_2_EMAIL, ADMIN_2_PASSWORD, "institution_admin"
     )
     student_user = _create_user(db, institution.id, None, STUDENT_PASSWORD, "student")
