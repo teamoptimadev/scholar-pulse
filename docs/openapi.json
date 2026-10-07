@@ -10946,6 +10946,268 @@
         }
       }
     },
+    "/ml-demo": {
+      "get": {
+        "tags": [
+          "ml-demo"
+        ],
+        "summary": "Ml Demo Index",
+        "operationId": "ml_demo_index_ml_demo_get",
+        "parameters": [
+          {
+            "name": "tab",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "default": "model1",
+              "title": "Tab"
+            }
+          },
+          {
+            "name": "view",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "View"
+            }
+          },
+          {
+            "name": "page",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "default": 1,
+              "title": "Page"
+            }
+          },
+          {
+            "name": "example",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Example"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "text/html": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/ml-demo/code-file": {
+      "get": {
+        "tags": [
+          "ml-demo"
+        ],
+        "summary": "Ml Demo Code File",
+        "description": "Standalone full-page view of a training code file (opened from the demo UI).",
+        "operationId": "ml_demo_code_file_ml_demo_code_file_get",
+        "parameters": [
+          {
+            "name": "tab",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "default": "model1",
+              "title": "Tab"
+            }
+          },
+          {
+            "name": "file",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "default": 1,
+              "title": "File"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "text/html": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/ml-demo/model1/predict": {
+      "post": {
+        "tags": [
+          "ml-demo"
+        ],
+        "summary": "Predict Model1",
+        "operationId": "predict_model1_ml_demo_model1_predict_post",
+        "requestBody": {
+          "content": {
+            "application/x-www-form-urlencoded": {
+              "schema": {
+                "$ref": "#/components/schemas/Body_predict_model1_ml_demo_model1_predict_post"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "text/html": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/ml-demo/model2/predict": {
+      "post": {
+        "tags": [
+          "ml-demo"
+        ],
+        "summary": "Predict Model2",
+        "operationId": "predict_model2_ml_demo_model2_predict_post",
+        "requestBody": {
+          "content": {
+            "application/x-www-form-urlencoded": {
+              "schema": {
+                "$ref": "#/components/schemas/Body_predict_model2_ml_demo_model2_predict_post"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "text/html": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/ml-demo/model3/predict": {
+      "post": {
+        "tags": [
+          "ml-demo"
+        ],
+        "summary": "Predict Model3",
+        "operationId": "predict_model3_ml_demo_model3_predict_post",
+        "requestBody": {
+          "content": {
+            "application/x-www-form-urlencoded": {
+              "schema": {
+                "$ref": "#/components/schemas/Body_predict_model3_ml_demo_model3_predict_post"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "text/html": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/": {
       "get": {
         "tags": [
@@ -11663,6 +11925,185 @@
           "status"
         ],
         "title": "AttendanceUpdate"
+      },
+      "Body_predict_model1_ml_demo_model1_predict_post": {
+        "properties": {
+          "CA_mark": {
+            "type": "number",
+            "title": "Ca Mark"
+          },
+          "MID_mark": {
+            "type": "number",
+            "title": "Mid Mark"
+          },
+          "attendance_percentage": {
+            "type": "number",
+            "title": "Attendance Percentage"
+          },
+          "study_hours_per_week": {
+            "type": "number",
+            "title": "Study Hours Per Week"
+          },
+          "assignment_completion_pct": {
+            "type": "number",
+            "title": "Assignment Completion Pct"
+          },
+          "previous_sgpa": {
+            "type": "number",
+            "title": "Previous Sgpa"
+          },
+          "previous_cgpa": {
+            "type": "number",
+            "title": "Previous Cgpa"
+          },
+          "backlog_count": {
+            "type": "integer",
+            "title": "Backlog Count"
+          },
+          "course_credits": {
+            "type": "integer",
+            "title": "Course Credits"
+          },
+          "course_type": {
+            "type": "string",
+            "title": "Course Type"
+          },
+          "branch": {
+            "type": "string",
+            "title": "Branch"
+          },
+          "semester": {
+            "type": "integer",
+            "title": "Semester"
+          }
+        },
+        "type": "object",
+        "required": [
+          "CA_mark",
+          "MID_mark",
+          "attendance_percentage",
+          "study_hours_per_week",
+          "assignment_completion_pct",
+          "previous_sgpa",
+          "previous_cgpa",
+          "backlog_count",
+          "course_credits",
+          "course_type",
+          "branch",
+          "semester"
+        ],
+        "title": "Body_predict_model1_ml_demo_model1_predict_post"
+      },
+      "Body_predict_model2_ml_demo_model2_predict_post": {
+        "properties": {
+          "CA_mark": {
+            "type": "number",
+            "title": "Ca Mark"
+          },
+          "MID_mark": {
+            "type": "number",
+            "title": "Mid Mark"
+          },
+          "attendance_percentage": {
+            "type": "number",
+            "title": "Attendance Percentage"
+          },
+          "study_hours_per_week": {
+            "type": "number",
+            "title": "Study Hours Per Week"
+          },
+          "assignment_completion_pct": {
+            "type": "number",
+            "title": "Assignment Completion Pct"
+          },
+          "previous_sgpa": {
+            "type": "number",
+            "title": "Previous Sgpa"
+          },
+          "previous_cgpa": {
+            "type": "number",
+            "title": "Previous Cgpa"
+          },
+          "backlog_count": {
+            "type": "integer",
+            "title": "Backlog Count"
+          },
+          "course_credits": {
+            "type": "integer",
+            "title": "Course Credits"
+          },
+          "branch": {
+            "type": "string",
+            "title": "Branch"
+          },
+          "semester": {
+            "type": "integer",
+            "title": "Semester"
+          }
+        },
+        "type": "object",
+        "required": [
+          "CA_mark",
+          "MID_mark",
+          "attendance_percentage",
+          "study_hours_per_week",
+          "assignment_completion_pct",
+          "previous_sgpa",
+          "previous_cgpa",
+          "backlog_count",
+          "course_credits",
+          "branch",
+          "semester"
+        ],
+        "title": "Body_predict_model2_ml_demo_model2_predict_post"
+      },
+      "Body_predict_model3_ml_demo_model3_predict_post": {
+        "properties": {
+          "attendance_percentage": {
+            "type": "number",
+            "title": "Attendance Percentage"
+          },
+          "previous_cgpa": {
+            "type": "number",
+            "title": "Previous Cgpa"
+          },
+          "backlog_count": {
+            "type": "integer",
+            "title": "Backlog Count"
+          },
+          "current_failed_courses": {
+            "type": "integer",
+            "title": "Current Failed Courses"
+          },
+          "low_performance_course_count": {
+            "type": "integer",
+            "title": "Low Performance Course Count"
+          },
+          "study_hours_per_week": {
+            "type": "number",
+            "title": "Study Hours Per Week"
+          },
+          "assignment_completion_percentage": {
+            "type": "number",
+            "title": "Assignment Completion Percentage"
+          },
+          "performance_trend": {
+            "type": "string",
+            "title": "Performance Trend"
+          }
+        },
+        "type": "object",
+        "required": [
+          "attendance_percentage",
+          "previous_cgpa",
+          "backlog_count",
+          "current_failed_courses",
+          "low_performance_course_count",
+          "study_hours_per_week",
+          "assignment_completion_percentage",
+          "performance_trend"
+        ],
+        "title": "Body_predict_model3_ml_demo_model3_predict_post"
       },
       "BulkAttendanceEntry": {
         "properties": {
@@ -14335,6 +14776,43 @@
         "type": "object",
         "title": "RiskDistribution"
       },
+      "RiskFactor": {
+        "properties": {
+          "feature": {
+            "type": "string",
+            "title": "Feature"
+          },
+          "contribution": {
+            "type": "number",
+            "title": "Contribution"
+          },
+          "value": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Value"
+          },
+          "is_missing": {
+            "type": "boolean",
+            "title": "Is Missing"
+          }
+        },
+        "type": "object",
+        "required": [
+          "feature",
+          "contribution",
+          "is_missing"
+        ],
+        "title": "RiskFactor"
+      },
       "RiskFactorCount": {
         "properties": {
           "factor": {
@@ -14356,60 +14834,106 @@
       "RiskFeatures": {
         "properties": {
           "attendance_percentage": {
-            "type": "number",
-            "maximum": 100.0,
-            "minimum": 0.0,
+            "anyOf": [
+              {
+                "type": "number",
+                "maximum": 100.0,
+                "minimum": 0.0
+              },
+              {
+                "type": "null"
+              }
+            ],
             "title": "Attendance Percentage"
           },
           "previous_cgpa": {
-            "type": "number",
-            "maximum": 10.0,
-            "minimum": 0.0,
+            "anyOf": [
+              {
+                "type": "number",
+                "maximum": 10.0,
+                "minimum": 0.0
+              },
+              {
+                "type": "null"
+              }
+            ],
             "title": "Previous Cgpa"
           },
           "backlog_count": {
-            "type": "integer",
-            "minimum": 0.0,
+            "anyOf": [
+              {
+                "type": "integer",
+                "minimum": 0.0
+              },
+              {
+                "type": "null"
+              }
+            ],
             "title": "Backlog Count"
           },
           "current_failed_courses": {
-            "type": "integer",
-            "minimum": 0.0,
+            "anyOf": [
+              {
+                "type": "integer",
+                "minimum": 0.0
+              },
+              {
+                "type": "null"
+              }
+            ],
             "title": "Current Failed Courses"
           },
           "low_performance_course_count": {
-            "type": "integer",
-            "minimum": 0.0,
+            "anyOf": [
+              {
+                "type": "integer",
+                "minimum": 0.0
+              },
+              {
+                "type": "null"
+              }
+            ],
             "title": "Low Performance Course Count"
           },
           "study_hours_per_week": {
-            "type": "number",
-            "maximum": 60.0,
-            "minimum": 0.0,
+            "anyOf": [
+              {
+                "type": "number",
+                "maximum": 60.0,
+                "minimum": 0.0
+              },
+              {
+                "type": "null"
+              }
+            ],
             "title": "Study Hours Per Week"
           },
           "assignment_completion_percentage": {
-            "type": "number",
-            "maximum": 100.0,
-            "minimum": 0.0,
+            "anyOf": [
+              {
+                "type": "number",
+                "maximum": 100.0,
+                "minimum": 0.0
+              },
+              {
+                "type": "null"
+              }
+            ],
             "title": "Assignment Completion Percentage"
           },
           "performance_trend": {
-            "type": "string",
-            "title": "Performance Trend",
-            "default": "STABLE"
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Performance Trend"
           }
         },
         "type": "object",
-        "required": [
-          "attendance_percentage",
-          "previous_cgpa",
-          "backlog_count",
-          "current_failed_courses",
-          "low_performance_course_count",
-          "study_hours_per_week",
-          "assignment_completion_percentage"
-        ],
         "title": "RiskFeatures"
       },
       "RiskPredictionResponse": {
@@ -14435,6 +14959,18 @@
             },
             "type": "array",
             "title": "Recommendations"
+          },
+          "data_completeness": {
+            "type": "number",
+            "title": "Data Completeness",
+            "default": 1.0
+          },
+          "top_factors": {
+            "items": {
+              "$ref": "#/components/schemas/RiskFactor"
+            },
+            "type": "array",
+            "title": "Top Factors"
           }
         },
         "type": "object",

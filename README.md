@@ -132,7 +132,7 @@ cd backend
 cp .env.example .env
 uv sync
 uv run alembic upgrade head
-uv run python scripts/reseed.py
+uv run python scripts/seed.py --scale 100
 uv run uvicorn app.main:app --reload --port 8000
 ```
 
