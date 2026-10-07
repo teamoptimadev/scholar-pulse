@@ -74,7 +74,7 @@ def cleanup_db():
     users_to_delete = []
 
     # Find ZZ items
-    db.query(StudentGoal).filter(StudentGoal.notes == "ZZ_TEST").delete(synchronize_session=False)
+    db.query(StudentGoal).filter(StudentGoal.notes.like("ZZ_TEST%")).delete(synchronize_session=False)
     
     # We must identify which enrollments are ZZ
     for dept in db.query(Department).filter(Department.name.like("ZZ_TEST%")).all():
@@ -296,25 +296,83 @@ for m, p in SPOOF_ROUTES:
 for m, p in ROLE_CHECK_ROUTES:
     TESTED[(m, p)] = "role-check"
 
-# Any tenant-scoped route not explicitly covered must have a specific reason
-for m, p in ROUTE_REGISTRY:
-    meta = ROUTE_REGISTRY[(m, p)]
-    if not meta["is_tenant_scoped"]:
-        continue
-    
-    if (m, p) not in TESTED:
-        if p.endswith("/me") or p.endswith("/me/goal-guidance") or p.endswith("/me/performance"):
-            UNTESTED_WITH_REASON[(m, p)] = "Scope comes from the token, no resource id"
-        elif m == "POST" and "auth" in p:
-            UNTESTED_WITH_REASON[(m, p)] = "Auth route does not read tenant data"
-        elif m == "POST":
-            UNTESTED_WITH_REASON[(m, p)] = "Write route not attacked in this round"
-        elif p.startswith("/api/v1/analytics"):
-            UNTESTED_WITH_REASON[(m, p)] = "Analytics endpoints rely on database views or functions, unattacked"
-        elif m == "GET" and "{" not in p:
-            UNTESTED_WITH_REASON[(m, p)] = "List route not attacked in this round"
-        else:
-            UNTESTED_WITH_REASON[(m, p)] = "Endpoint not attacked in this round"
+UNTESTED_WITH_REASON = {
+    ('GET', '/api/v1/academic/semesters'): "Endpoint not attacked in this round",
+    ('GET', '/api/v1/academic/years'): "Endpoint not attacked in this round",
+    ('GET', '/api/v1/analytics/attendance-performance'): "Analytics endpoints rely on database views or functions, unattacked",
+    ('GET', '/api/v1/analytics/cgpa-distribution'): "Analytics endpoints rely on database views or functions, unattacked",
+    ('GET', '/api/v1/analytics/courses'): "Analytics endpoints rely on database views or functions, unattacked",
+    ('GET', '/api/v1/analytics/department-risk-stacks'): "Analytics endpoints rely on database views or functions, unattacked",
+    ('GET', '/api/v1/analytics/departments'): "Analytics endpoints rely on database views or functions, unattacked",
+    ('GET', '/api/v1/analytics/overview'): "Analytics endpoints rely on database views or functions, unattacked",
+    ('GET', '/api/v1/analytics/pass-fail'): "Analytics endpoints rely on database views or functions, unattacked",
+    ('GET', '/api/v1/analytics/pass-fail-trend'): "Analytics endpoints rely on database views or functions, unattacked",
+    ('GET', '/api/v1/analytics/performance-indicators'): "Analytics endpoints rely on database views or functions, unattacked",
+    ('GET', '/api/v1/analytics/performance-trends'): "Analytics endpoints rely on database views or functions, unattacked",
+    ('GET', '/api/v1/analytics/predictions/actual-vs-predicted'): "Analytics endpoints rely on database views or functions, unattacked",
+    ('GET', '/api/v1/analytics/predictions/pass-fail'): "Analytics endpoints rely on database views or functions, unattacked",
+    ('GET', '/api/v1/analytics/predictions/performance'): "Analytics endpoints rely on database views or functions, unattacked",
+    ('GET', '/api/v1/analytics/predictions/risk'): "Analytics endpoints rely on database views or functions, unattacked",
+    ('GET', '/api/v1/analytics/risk-distribution'): "Analytics endpoints rely on database views or functions, unattacked",
+    ('GET', '/api/v1/analytics/risk-factors'): "Analytics endpoints rely on database views or functions, unattacked",
+    ('GET', '/api/v1/analytics/scoped/attendance-performance'): "Analytics endpoints rely on database views or functions, unattacked",
+    ('GET', '/api/v1/analytics/scoped/cgpa-distribution'): "Analytics endpoints rely on database views or functions, unattacked",
+    ('GET', '/api/v1/analytics/scoped/department-risk-stacks'): "Analytics endpoints rely on database views or functions, unattacked",
+    ('GET', '/api/v1/analytics/scoped/departments'): "Analytics endpoints rely on database views or functions, unattacked",
+    ('GET', '/api/v1/analytics/scoped/overview'): "Analytics endpoints rely on database views or functions, unattacked",
+    ('GET', '/api/v1/analytics/scoped/performance-trends'): "Analytics endpoints rely on database views or functions, unattacked",
+    ('GET', '/api/v1/analytics/scoped/predictions/risk'): "Analytics endpoints rely on database views or functions, unattacked",
+    ('GET', '/api/v1/analytics/scoped/risk-distribution'): "Analytics endpoints rely on database views or functions, unattacked",
+    ('GET', '/api/v1/analytics/scoped/risk-factors'): "Analytics endpoints rely on database views or functions, unattacked",
+    ('POST', '/api/v1/assessments'): "Write route not attacked in this round",
+    ('POST', '/api/v1/assessments/marks'): "Write route not attacked in this round",
+    ('GET', '/api/v1/assessments/marks-grid'): "Endpoint not attacked in this round",
+    ('POST', '/api/v1/assessments/marks/bulk'): "Write route not attacked in this round",
+    ('POST', '/api/v1/assessments/marks/bulk-grid'): "Write route not attacked in this round",
+    ('GET', '/api/v1/assessments/roster'): "Endpoint not attacked in this round",
+    ('GET', '/api/v1/at-risk'): "Endpoint not attacked in this round",
+    ('GET', '/api/v1/at-risk/summary'): "Endpoint not attacked in this round",
+    ('POST', '/api/v1/attendance'): "Write route not attacked in this round",
+    ('POST', '/api/v1/attendance/bulk'): "Write route not attacked in this round",
+    ('GET', '/api/v1/attendance/roster'): "Endpoint not attacked in this round",
+    ('POST', '/api/v1/auth/logout'): "Auth route does not read tenant data",
+    ('GET', '/api/v1/auth/me'): "Scope comes from the token, no resource id",
+    ('POST', '/api/v1/courses'): "Write route not attacked in this round",
+    ('POST', '/api/v1/faculty'): "Write route not attacked in this round",
+    ('GET', '/api/v1/faculty/{faculty_id}/students'): "Endpoint not attacked in this round",
+    ('POST', '/api/v1/faculty/{faculty_id}/students/{student_id}'): "Write route not attacked in this round",
+    ('DELETE', '/api/v1/faculty/{faculty_id}/students/{student_id}'): "Endpoint not attacked in this round",
+    ('GET', '/api/v1/goals'): "Endpoint not attacked in this round",
+    ('POST', '/api/v1/goals'): "Write route not attacked in this round",
+    ('GET', '/api/v1/institutions/me'): "Scope comes from the token, no resource id",
+    ('PATCH', '/api/v1/institutions/me'): "Scope comes from the token, no resource id",
+    ('POST', '/api/v1/parents'): "Write route not attacked in this round",
+    ('GET', '/api/v1/parents/{parent_id}/children'): "Endpoint not attacked in this round",
+    ('POST', '/api/v1/parents/{parent_id}/children/{student_id}'): "Write route not attacked in this round",
+    ('DELETE', '/api/v1/parents/{parent_id}/children/{student_id}'): "Endpoint not attacked in this round",
+    ('POST', '/api/v1/predictions/all'): "Write route not attacked in this round",
+    ('POST', '/api/v1/predictions/pass-fail'): "Write route not attacked in this round",
+    ('POST', '/api/v1/predictions/performance'): "Write route not attacked in this round",
+    ('POST', '/api/v1/predictions/regenerate'): "Write route not attacked in this round",
+    ('POST', '/api/v1/predictions/risk'): "Write route not attacked in this round",
+    ('POST', '/api/v1/predictions/student'): "Write route not attacked in this round",
+    ('POST', '/api/v1/programs'): "Write route not attacked in this round",
+    ('GET', '/api/v1/reports/at-risk'): "Endpoint not attacked in this round",
+    ('GET', '/api/v1/reports/at-risk/pdf'): "Endpoint not attacked in this round",
+    ('GET', '/api/v1/reports/institutional'): "Endpoint not attacked in this round",
+    ('GET', '/api/v1/reports/institutional/data'): "Endpoint not attacked in this round",
+    ('GET', '/api/v1/reports/institutional/pdf'): "Endpoint not attacked in this round",
+    ('GET', '/api/v1/reports/scoped/institutional/data'): "Endpoint not attacked in this round",
+    ('GET', '/api/v1/reports/scoped/institutional/pdf'): "Endpoint not attacked in this round",
+    ('GET', '/api/v1/reports/student/{student_id}'): "Endpoint not attacked in this round",
+    ('POST', '/api/v1/results/course'): "Write route not attacked in this round",
+    ('POST', '/api/v1/results/enrollments'): "Write route not attacked in this round",
+    ('POST', '/api/v1/results/semester'): "Write route not attacked in this round",
+    ('POST', '/api/v1/students'): "Write route not attacked in this round",
+    ('GET', '/api/v1/students/me/goal-guidance'): "Scope comes from the token, no resource id",
+    ('GET', '/api/v1/students/me/performance'): "Scope comes from the token, no resource id",
+    ('POST', '/api/v1/users'): "Write route not attacked in this round",
+}
 
 class TestTenantIsolation:
     def test_all_routes_classified(self):
@@ -366,20 +424,20 @@ class TestTenantIsolation:
 
     
     PATCH_PAYLOADS = {
-        "dept": {"name": "HACKED"},
-        "program": {"name": "HACKED"},
-        "course": {"name": "HACKED"},
-        "student": {"name": "HACKED"},
-        "faculty": {"name": "HACKED"},
-        "parent": {"name": "HACKED"},
+        "dept": {"name": "ZZ_TEST_DEPT_HACKED"},
+        "program": {"name": "ZZ_TEST_PROG_HACKED"},
+        "course": {"name": "ZZ_TEST_CRS_HACKED"},
+        "student": {"name": "ZZ_TEST_STU_HACKED"},
+        "faculty": {"name": "ZZ_TEST_FAC_HACKED"},
+        "parent": {"name": "ZZ_TEST_PAR_HACKED"},
         "enrollment": {"attendance_percentage": 10},
-        "assessment": {"name": "HACKED"},
+        "assessment": {"name": "ZZ_TEST_ASM_HACKED"},
         "mark": {"marks_obtained": 10},
         "attendance": {"status": "absent"},
         "course_result": {"grade": "F"},
         "semester_result": {"sgpa": 0.0},
         "user": {"is_active": False},
-        "goal": {"notes": "HACKED"},
+        "goal": {"notes": "ZZ_TEST_GOAL_HACKED"},
     }
 
     @pytest.mark.parametrize("method, key, url_template", ATTACK_CASES)
