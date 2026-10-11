@@ -44,6 +44,7 @@ export function AttendanceEntryTable({
   }, [roster]);
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- intentional: sync attendance table values from initialValues props
     setValues(initialValues);
     setErrors({});
     setDirty(false);

@@ -28,6 +28,7 @@ export function FacultyReportsContent() {
 
   useEffect(() => {
     const fromUrl = filtersFromSearchParams(searchParams);
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- intentional: sync filters state from URL search params
     setDraftFilters(fromUrl);
     setAppliedFilters(fromUrl);
   }, [searchParams]);

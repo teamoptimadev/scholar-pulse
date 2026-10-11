@@ -74,6 +74,7 @@ export function MarksEntryTable({
   }, [grid]);
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- intentional: sync marks table values from initialValues props
     setValues(initialValues);
     setErrors({});
     setDirty(false);

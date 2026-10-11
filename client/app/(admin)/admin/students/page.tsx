@@ -109,6 +109,7 @@ export default function AdminStudentsPage() {
 
   useEffect(() => {
     if (departments.length > 0 && !form.department_id) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- intentional: initialize default department_id in student form state
       setForm((current) => ({
         ...current,
         department_id: departments[0].id,
