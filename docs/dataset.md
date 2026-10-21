@@ -15,6 +15,7 @@ The ML models are trained on the **UCI Student Performance Dataset**, committed 
 
 Attribute documentation: `ml/data/raw/student.txt`
 
+
 ## Columns
 
 ### Target and Derived Labels
@@ -23,6 +24,7 @@ Attribute documentation: `ml/data/raw/student.txt`
 |--------|------|
 | `G3` | Final grade (0–20) — target for Model 1 |
 | `pass_fail` | Derived: PASS if G3 ≥ 10 — target for Model 2 |
+
 
 ### Input Features (32)
 
@@ -40,6 +42,7 @@ Model 3 uses only: `absences`, `G1`, `G2`, `failures`, `studytime`
 
 `student-por.csv` (Portuguese language course) is available from UCI but not used by any notebook.
 
+
 ## ERP Field Mapping (Future)
 
 The UCI dataset does not include ERP-specific fields:
@@ -55,6 +58,7 @@ The UCI dataset does not include ERP-specific fields:
 When institutional data becomes available, models should be retrained on mapped ERP features.
 
 ## Processed Data
+
 
 `ml/data/processed/` is reserved for future train/test exports. Training currently happens in notebooks with in-memory splits.
 
