@@ -1,5 +1,6 @@
 """Analytics API routes."""
 
+
 from app.api.deps import AdminUser, CurrentUserDep, DbSession
 from app.api.v1.analytics_filters import AnalyticsFilterParams, analytics_filter_dep
 from app.schemas.analytics import (
@@ -18,6 +19,7 @@ from app.schemas.analytics import (
     RiskDistribution,
     RiskFactorCount,
 )
+
 from app.services.analytics_aggregations import (
     get_actual_vs_predicted,
     get_attendance_performance,
