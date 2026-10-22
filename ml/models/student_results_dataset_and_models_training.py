@@ -3657,6 +3657,7 @@ risk_engine_config = {
 
     "scoring_rules": {
         "attendance_percentage": {
+            "missing": 0.50,
             "<60": 1.0,
             "60-74.99": 0.70,
             "75-84.99": 0.30,
@@ -3673,6 +3674,7 @@ risk_engine_config = {
         },
 
         "backlog_count": {
+            "missing": 0.0,
             "0": 0.0,
             "1": 0.30,
             "2": 0.60,
@@ -3681,6 +3683,7 @@ risk_engine_config = {
         },
 
         "current_failed_courses": {
+            "missing": 0.0,
             "0": 0.0,
             "1": 0.50,
             "2": 0.75,
@@ -3688,6 +3691,7 @@ risk_engine_config = {
         },
 
         "low_performance_course_count": {
+            "missing": 0.0,
             "0": 0.0,
             "1": 0.25,
             "2": 0.50,
@@ -3696,6 +3700,7 @@ risk_engine_config = {
         },
 
         "study_hours_per_week": {
+            "missing": 0.50,
             "<10": 1.0,
             "10-14.99": 0.60,
             "15-19.99": 0.30,
@@ -3703,6 +3708,7 @@ risk_engine_config = {
         },
 
         "assignment_completion_percentage": {
+            "missing": 0.50,
             "<50": 1.0,
             "50-69.99": 0.60,
             "70-84.99": 0.30,
@@ -3710,6 +3716,7 @@ risk_engine_config = {
         },
 
         "performance_trend": {
+            "missing": 0.0,
             "DECLINING": 1.0,
             "STABLE": 0.30,
             "IMPROVING": 0.0
