@@ -1,22 +1,22 @@
 # ML Evaluation
 
-Evaluation metrics for the three academic intelligence components, derived from Colab notebook training on the UCI `student-mat.csv` dataset.
+Evaluation metrics for the three academic intelligence components, derived from the synthetic CBCS datasets and the versioned risk-engine evaluation.
 
 ## Train/Test Split
 
 | Model | Split | Stratify | random_state |
 |-------|-------|----------|--------------|
-| Model 1 (regression) | 80/20 | No | 42 |
-| Model 2 (classification) | 80/20 | Yes (`pass_fail`) | 42 |
-| Model 3 (rule engine) | Full dataset validation | N/A | N/A |
+| Model 1 (regression) | GroupShuffleSplit by student | No | 42 |
+| Model 2 (classification) | StratifiedGroupKFold by student | Yes | 42 |
+| Model 3 (rule engine) | Independent synthetic reference labels | N/A | N/A |
 
 ## Model 1 — Performance Prediction (Regression)
 
 | Metric | Value |
 |--------|-------|
-| MAE | 1.2321 |
-| RMSE | 1.9348 |
-| R² | 0.8174 |
+| MAE | 5.65486118852561 |
+| RMSE | 7.089512420739615 |
+| R² | 0.757390134321228 |
 
 **Algorithm:** HistGradientBoostingRegressor in sklearn Pipeline
 
@@ -24,45 +24,48 @@ Evaluation metrics for the three academic intelligence components, derived from 
 
 | Metric | Value |
 |--------|-------|
-| Accuracy | 0.8861 |
-| Precision (FAIL) | 0.7742 |
-| Recall (FAIL) | 0.9231 |
-| F1 (FAIL) | 0.8421 |
-| ROC-AUC | 0.9652 |
+| Accuracy | 0.9595027664008048 |
+| Precision (FAIL) | 0.1606015037593985 |
+| Recall (FAIL) | 0.9518716577540107 |
+| F1 (FAIL) | 0.2748327328872877 |
+| ROC-AUC | 0.9912483616745048 |
 
-**Algorithm:** Logistic Regression in sklearn Pipeline
+**Algorithm:** HistGradientBoostingClassifier
 
 ### Why FAIL Recall Matters
 
-In academic intervention systems, missing a failing student (false negative) is worse than a false alarm. The selected model catches **24 of 26** actual FAIL students in the test set (92.31% recall).
+In academic intervention systems, missing a failing student (false negative) is worse than a false alarm. The selected model prioritizes FAIL recall and ROC-AUC.
 
 ### Class Distribution
 
-- PASS: 265 (67.09%)
-- FAIL: 130 (32.91%)
+The test set contains 69,585 rows and 561 FAIL rows (see `ml/models/model2_metrics.json`).
 
 ## Model 3 — At-Risk Detection (Rule Engine)
 
-Model 3 is **not** an ML classifier and has no formal ML metrics. It is a transparent heuristic risk engine.
+Model 3 is **not** an ML classifier. It is the transparent weighted risk engine version 1.1.
 
-### Distribution on Full Dataset (395 students)
+### Evaluation Metrics
 
 | Level | Count | % |
 |-------|-------|---|
-| LOW | 165 | 41.77% |
-| MEDIUM | 151 | 38.23% |
-| HIGH | 79 | 20.00% |
+| Accuracy | 0.824 |
+| Macro precision | 0.7982 |
+| Macro recall | 0.7621 |
+| Macro F1 | 0.7795 |
+| HIGH precision | 0.8124 |
+| HIGH recall | 0.6988 |
+| HIGH F1 | 0.7512 |
 
 ### Validation
 
-- G3 leakage test passed (risk output unchanged when G3 varies)
-- Config JSON weights/thresholds verified on reload
+- Config JSON weights and thresholds verified on reload.
+- Missing history indicators contribute 0; missing behaviour and prior-attainment indicators contribute half of their weight.
+- An all-missing student scores 25.0 and is classified MEDIUM.
 
 ## Caveats
 
-- **395 students** is a small dataset — test metrics are not production guarantees.
-- **UCI domain** may not match institutional ERP data.
-- **Model 3 weights** are heuristic, not ML-optimized.
+- The synthetic datasets are not production guarantees.
+- Model 3 weights are heuristic, not ML-optimized.
 
 ## Running Tests
 
@@ -78,5 +81,5 @@ SHAP explainability for classification models is a future enhancement when FastA
 
 - [ML Pipeline](ml-pipeline.md)
 - [Dataset](dataset.md)
-- [Model Evaluation (ml/)](../ml/docs/model_evaluation.md)
+- [Dataset Documentation](../ml/models/dataset_documentation.md)
 - [Development Phases](development-phases.md)

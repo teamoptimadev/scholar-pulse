@@ -16,6 +16,7 @@ Base URL: `http://localhost:8000/api/v1`
 | POST | `/auth/signup` | Institution admin signup |
 | POST | `/auth/login` | Role-based login |
 | POST | `/auth/logout` | Clear session cookies |
+| POST | `/auth/refresh` | Refresh the access token using the refresh cookie |
 | GET | `/auth/me` | Current user info |
 
 Roles: `institution_admin`, `student`, `faculty`, `parent`
@@ -29,6 +30,7 @@ Roles: `institution_admin`, `student`, `faculty`, `parent`
 | POST | `/predictions/risk` | Risk score and level |
 | POST | `/predictions/all` | Combined predictions |
 | POST | `/predictions/student` | Predictions from DB data (auth required) |
+| POST | `/predictions/regenerate` | Regenerate stored predictions for a student (auth required) |
 
 ## Analytics (institution_admin)
 

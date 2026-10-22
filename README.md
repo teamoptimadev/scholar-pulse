@@ -64,7 +64,7 @@ Each institution operates as an independent tenant with backend-enforced data is
 ## Repository Structure
 
 ```
-digital-academic-analytics/
+scholar-pulse/
 ├── client/          # Next.js frontend (Bun)
 ├── backend/         # FastAPI API server (uv)
 ├── ml/              # ML development & training (uv)
@@ -77,15 +77,27 @@ digital-academic-analytics/
 ## ML Pipeline
 
 ```
-UCI student-mat.csv → Training (notebooks) → .pkl / .json artifacts → Python inference → FastAPI
+university_data/*.csv → Training → .pkl / .json artifacts → Python inference → FastAPI
 ```
 
-Three components (trained on UCI Student Performance Dataset):
-1. **Performance Prediction** — predicted final grade (G3) via HistGradientBoosting regression
-2. **Pass/Fail Prediction** — PASS/FAIL classification via Logistic Regression
-3. **At-Risk Detection** — rule-based risk scoring (not ML)
+Three components trained on the synthetic CBCS university dataset:
+1. **Performance Prediction** — end-term marks from 0-100 via HistGradientBoostingRegressor
+2. **Pass/Fail Prediction** — PASS/FAIL classification with probabilities via HistGradientBoostingClassifier, tuned for FAIL recall
+3. **At-Risk Detection** — versioned rule-based weighted risk engine (not ML)
 
 See [docs/ml-pipeline.md](docs/ml-pipeline.md) and [ml/README.md](ml/README.md).
+
+Prediction and authentication endpoints under `/api/v1`:
+
+```text
+POST /predictions/performance
+POST /predictions/pass-fail
+POST /predictions/risk
+POST /predictions/all
+POST /predictions/student
+POST /predictions/regenerate
+POST /auth/refresh
+```
 
 ## Development Phases
 
@@ -138,7 +150,7 @@ uv run uvicorn app.main:app --reload --port 8000
 
 API runs at `http://localhost:8000`. **Interactive API docs:** [Swagger UI](http://localhost:8000/docs) · [ReDoc](http://localhost:8000/redoc). Health: `GET /health`.
 
-Default admin login: `admin@prj649.edu` / `admin123`
+Default admin login: `admin@demo.com` / `admin123`. See [sample-credentials.md](sample-credentials.md) for the other seeded logins.
 
 ### 4. ML Development
 
@@ -146,6 +158,16 @@ Default admin login: `admin@prj649.edu` / `admin123`
 cd ml
 uv sync
 ```
+
+## SDG Alignment
+
+**SDG 4: Quality Education.** Early identification of at-risk students supports timely academic intervention. Role-specific academic feedback helps students, faculty, parents, and administrators act on relevant evidence.
+
+**SDG 9: Industry, Innovation and Infrastructure.** The deployable multi-tenant analytics platform gives institutions reusable infrastructure for academic monitoring. Its prediction and reporting services turn institutional data into an operational innovation.
+
+## Test and CI
+
+From `/backend`, run `uv run pytest tests` and `uv run ruff check .`.
 
 ## Documentation
 

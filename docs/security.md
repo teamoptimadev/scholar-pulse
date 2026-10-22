@@ -10,7 +10,7 @@ This document records the chosen security stack and policies. It extends [authen
 |---------|---------|-------|
 | Password hashing | **argon2-cffi** (`PasswordHasher`) | OWASP-recommended; stronger than bcrypt for new projects |
 | Auth tokens | **PyJWT** (HS256) | Signed JWTs in httpOnly cookies |
-| Rate limiting | **slowapi** | Applied to all `/api/auth/*` endpoints |
+| Rate limiting | **slowapi** | Applied to all `/api/v1/auth/*` endpoints |
 | Password reset | Admin-initiated only (v1) | No self-service email flow in v1 |
 | Email verification | Not in v1 | Admin creates all non-admin accounts |
 
@@ -22,7 +22,7 @@ sequenceDiagram
     participant FastAPI
     participant DB
 
-    Browser->>FastAPI: POST /api/auth/login
+    Browser->>FastAPI: POST /api/v1/auth/login
     FastAPI->>FastAPI: slowapi rate check (5/min per IP)
     FastAPI->>DB: fetch user by email/roll_number + institution
     FastAPI->>FastAPI: verify password with argon2
@@ -30,8 +30,8 @@ sequenceDiagram
     FastAPI->>FastAPI: issue access JWT (15 min) + refresh JWT (7 days)
     FastAPI-->>Browser: Set-Cookie access_token (httpOnly, Secure, SameSite=Lax)
     FastAPI-->>Browser: Set-Cookie refresh_token (httpOnly, Secure, SameSite=Lax)
-    Browser->>FastAPI: GET /api/students (cookies sent automatically)
-    FastAPI->>FastAPI: decode JWT, extract institution_id + role
+    Browser->>FastAPI: GET /api/v1/students (cookies sent automatically)
+    FastAPI->>FastAPI: verify JWT and extract user id
     FastAPI->>DB: query with institution_id filter
 ```
 
@@ -74,8 +74,9 @@ Tokens are stored in **httpOnly cookies**, not localStorage. This prevents XSS f
 ### Token Payload Rules
 
 - `sub` — user UUID
-- `role` — `admin`, `student`, `faculty`, or `parent`
+- `role` — `institution_admin`, `student`, `faculty`, or `parent`
 - `institution_id` — tenant UUID; **always derived server-side at login, never from client input**
+- The access token carries the user id, role, and `institution_id`, but the backend reads only the verified user id and re-reads role and `institution_id` from the database on every request.
 - Never include sensitive data (password hash, email) in the JWT payload
 
 ## Rate Limiting
@@ -105,16 +106,16 @@ Not in v1 scope. All non-admin accounts are created by the Institution Admin, wh
 
 | Method | Path | Auth required | Rate limited |
 |--------|------|--------------|-------------|
-| POST | `/api/auth/signup` | No | Yes (3/min) |
-| POST | `/api/auth/login` | No | Yes (5/min) |
-| POST | `/api/auth/logout` | Yes | No |
-| POST | `/api/auth/refresh` | Refresh cookie | Yes (10/min) |
-| GET | `/api/auth/me` | Yes | No |
+| POST | `/api/v1/auth/signup` | No | Yes (3/min) |
+| POST | `/api/v1/auth/login` | No | Yes (5/min) |
+| POST | `/api/v1/auth/logout` | Yes | No |
+| POST | `/api/v1/auth/refresh` | Refresh cookie | Yes (10/min) |
+| GET | `/api/v1/auth/me` | Yes | No |
 
 ## Security Rules (mandatory)
 
 1. Never trust `institution_id` or `role` from the client request body or query params
-2. Always derive tenant and role from the decoded JWT
+2. Re-read tenant and role from the database using the verified user id
 3. Disabled users (`is_login_enabled = false`) must receive `401 Unauthorized` on login
 4. All database queries must filter by `institution_id` from the JWT
 5. JWT secret (`SECRET_KEY`) must be ≥ 32 random bytes in production (enforced at startup); never commit to version control

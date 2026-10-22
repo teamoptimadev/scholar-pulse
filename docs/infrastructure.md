@@ -37,7 +37,7 @@ All environment files are gitignored. Only `.env.example` is committed.
 ```bash
 cp .env.example .env
 docker compose up -d
-cd backend && uv run alembic upgrade head && uv run python scripts/reseed.py
+cd backend && uv run alembic upgrade head && uv run python scripts/seed.py --scale 100
 ```
 
 ## Observability

@@ -2,73 +2,46 @@
 
 ## Overview
 
-The ML models are trained on the **UCI Student Performance Dataset**, committed at `ml/data/raw/student-mat.csv`.
+The ML models are trained on a synthetic CBCS university dataset in `university_data/*.csv`. Its schema and generation logic are documented in [dataset documentation](../ml/models/dataset_documentation.md).
 
 | Property | Value |
 |----------|-------|
-| Source | [UCI Student Performance](https://archive.ics.uci.edu/dataset/320/student+performance) |
-| File | `student-mat.csv` (mathematics course) |
-| Rows | 395 students |
-| Columns | 33 |
-| Separator | `;` |
-| Missing values | None |
-
-Attribute documentation: `ml/data/raw/student.txt`
+| Source | Synthetic CBCS university data |
+| Files | `university_data/*.csv` |
+| Schema | [dataset documentation](../ml/models/dataset_documentation.md) |
 
 
 ## Columns
 
-### Target and Derived Labels
+### Targets and Derived Labels
 
 | Column | Role |
 |--------|------|
-| `G3` | Final grade (0–20) — target for Model 1 |
-| `pass_fail` | Derived: PASS if G3 ≥ 10 — target for Model 2 |
+| `TARGET_END_MARKS` | End-term marks from 0 to 100 — target for Model 1 |
+| `TARGET_PASS_FAIL` | PASS/FAIL target for Model 2 |
 
 
-### Input Features (32)
+### Model Input Features
 
-All columns except `G3` are used as features for Models 1 and 2.
+Model 1 uses `CA_mark`, `MID_mark`, `attendance_percentage`, `study_hours_per_week`, `assignment_completion_pct`, `previous_sgpa`, `previous_cgpa`, `backlog_count`, `course_credits`, `course_type`, `branch`, and `semester`.
 
-**Numerical (15):** `age`, `Medu`, `Fedu`, `traveltime`, `studytime`, `failures`, `famrel`, `freetime`, `goout`, `Dalc`, `Walc`, `health`, `absences`, `G1`, `G2`
-
-**Categorical (17):** `school`, `sex`, `address`, `famsize`, `Pstatus`, `Mjob`, `Fjob`, `reason`, `guardian`, `schoolsup`, `famsup`, `paid`, `activities`, `nursery`, `higher`, `internet`, `romantic`
+Model 2 uses the same features except `course_type`.
 
 ### Model 3 Inputs
 
-Model 3 uses only: `absences`, `G1`, `G2`, `failures`, `studytime`
-
-## Unused Data
-
-`student-por.csv` (Portuguese language course) is available from UCI but not used by any notebook.
-
-
-## ERP Field Mapping (Future)
-
-The UCI dataset does not include ERP-specific fields:
-
-| ERP Field | UCI Equivalent (approximate) |
-|-----------|---------------------------|
-| Attendance % | `absences` (inverse relationship) |
-| Internal marks | `G1`, `G2` |
-| Final grade | `G3` |
-| CGPA | Not available |
-| Department/course | Not available |
-
-When institutional data becomes available, models should be retrained on mapped ERP features.
+Model 3 uses `attendance_percentage`, `previous_cgpa`, `backlog_count`, `current_failed_courses`, `low_performance_course_count`, `study_hours_per_week`, `assignment_completion_percentage`, and `performance_trend`.
 
 ## Processed Data
 
 
-`ml/data/processed/` is reserved for future train/test exports. Training currently happens in notebooks with in-memory splits.
+The model training datasets are `model1_regression_dataset.csv` and `model2_pass_fail_dataset.csv`; they contain different row sets.
 
 ## Backend Seed Data (Future)
 
-PostgreSQL development data is loaded via `backend/scripts/seed.py` (see `scripts/reseed.py` for a full reset). The UCI dataset is used for ML training only.
+PostgreSQL development data is loaded via `backend/scripts/seed.py`.
 
 ## Related Documentation
 
 - [ML Pipeline](ml-pipeline.md)
 - [ML Evaluation](ml-evaluation.md)
-- [ML Data README](../ml/data/README.md)
-- [Data Pipeline (ml/)](../ml/docs/data_pipeline.md)
+- [ML Data Documentation](../ml/models/dataset_documentation.md)

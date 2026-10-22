@@ -25,7 +25,7 @@ All artifacts live in `ml/models/`:
 
 **Output:** `predicted_end_marks` (0–100)
 
-**Metrics:** MAE 5.63, RMSE 7.07, R² 0.764
+**Metrics:** MAE 5.65486118852561, RMSE 7.089512420739615, R² 0.757390134321228 (see `ml/models/model1_metrics.json`).
 
 ## Model 2 — Pass/Fail Prediction
 
@@ -35,7 +35,7 @@ All artifacts live in `ml/models/`:
 
 **Output:** prediction (PASS/FAIL), pass_probability, fail_probability
 
-**Metrics:** Accuracy 95.3%, FAIL recall 96.7%, ROC-AUC 0.991
+**Metrics:** Accuracy 0.9595027664008048, FAIL recall 0.9518716577540107, ROC-AUC 0.9912483616745048 (see `ml/models/model2_metrics.json`).
 
 ## Model 3 — At-Risk Detection
 
@@ -56,6 +56,8 @@ All artifacts live in `ml/models/`:
 - MEDIUM: 22 < score ≤ 38
 - HIGH: score > 38
 
+The engine configuration is version 1.1. Its response includes `data_completeness` from 0 to 1 and up to three `top_factors`, each containing `feature`, `contribution`, `value`, and `is_missing`. Missing history indicators contribute 0; missing behaviour and prior-attainment indicators contribute half of their weight. An all-missing student scores 25.0 and is classified MEDIUM.
+
 ## Backend Integration
 
 Models are loaded once at FastAPI startup via `ModelLoader` in `backend/app/ml/model_loader.py`.
@@ -75,4 +77,9 @@ POST /api/v1/predictions/pass-fail
 POST /api/v1/predictions/risk
 POST /api/v1/predictions/all
 POST /api/v1/predictions/student  (requires auth, uses DB features)
+POST /api/v1/predictions/regenerate (requires auth, regenerates stored predictions)
+POST /api/v1/auth/refresh (refreshes the access token using the refresh cookie)
 ```
+
+- `/predictions/regenerate`: regenerate stored predictions for a student.
+- `/auth/refresh`: issue a new access token using the refresh cookie.
