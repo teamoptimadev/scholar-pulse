@@ -1,0 +1,49 @@
+{
+    "model_name": "Model 1 - End-Term Mark Prediction (CA-only)",
+    "problem_type": "Regression",
+    "selected_algorithm": "HistGradientBoostingRegressor",
+    "dataset": "model1_regression_dataset.csv",
+    "train_samples": 215712,
+    "test_samples": 53971,
+    "features": [
+        "CA_mark",
+        "attendance_percentage",
+        "study_hours_per_week",
+        "assignment_completion_pct",
+        "previous_sgpa",
+        "previous_cgpa",
+        "backlog_count",
+        "course_credits",
+        "course_type",
+        "branch",
+        "semester"
+    ],
+    "target": "TARGET_END_MARKS",
+    "metrics": {
+        "MAE": 5.942766748840104,
+        "RMSE": 7.458516606522033,
+        "R2": 0.7314775234422093
+    },
+    "random_state": 42,
+    "n_train_students": 8000,
+    "n_test_students": 2000,
+    "split": "GroupShuffleSplit by student_id, seed 42",
+    "baseline_mae_train_mean": 11.871468615094395,
+    "comparison_table": [
+        {
+            "metric": "MAE",
+            "full_model": 5.65486118852561,
+            "ca_only_model": 5.942766748840104
+        },
+        {
+            "metric": "RMSE",
+            "full_model": 7.089512420739615,
+            "ca_only_model": 7.458516606522033
+        },
+        {
+            "metric": "R2",
+            "full_model": 0.757390134321228,
+            "ca_only_model": 0.7314775234422093
+        }
+    ]
+}

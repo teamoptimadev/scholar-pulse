@@ -70,7 +70,7 @@ def make_group_split(df, label=None, test_size=0.20, seed=42):
     return train_idx, test_idx
 
 
-def run_retraining():
+def run_retraining(save_full_artifacts=True):
     import joblib
     import sklearn
     from sklearn.compose import ColumnTransformer
@@ -139,15 +139,16 @@ def run_retraining():
     model1_mae = mean_absolute_error(y_test, pred1)
     model1_rmse = np.sqrt(mean_squared_error(y_test, pred1))
     model1_r2 = r2_score(y_test, pred1)
-    importance_result = permutation_importance(
-        model1, X_test, y_test, scoring="neg_root_mean_squared_error",
-        n_repeats=3, random_state=42, n_jobs=-1,
-    )
-    importance = pd.DataFrame({
-        "Feature": X_test.columns,
-        "Importance": importance_result.importances_mean,
-        "Std": importance_result.importances_std,
-    }).sort_values("Importance", ascending=False).reset_index(drop=True)
+    if save_full_artifacts:
+        importance_result = permutation_importance(
+            model1, X_test, y_test, scoring="neg_root_mean_squared_error",
+            n_repeats=3, random_state=42, n_jobs=-1,
+        )
+        importance = pd.DataFrame({
+            "Feature": X_test.columns,
+            "Importance": importance_result.importances_mean,
+            "Std": importance_result.importances_std,
+        }).sort_values("Importance", ascending=False).reset_index(drop=True)
     model1_metrics = {
         "model_name": "Model 1 - End-Term Mark Prediction",
         "problem_type": "Regression",
@@ -270,21 +271,228 @@ def run_retraining():
         },
     }
 
+    ca_features = [
+        "CA_mark", "attendance_percentage", "study_hours_per_week",
+        "assignment_completion_pct", "previous_sgpa", "previous_cgpa",
+        "backlog_count", "course_credits", "course_type", "branch", "semester",
+    ]
+    ca_numeric_features = [
+        "CA_mark", "attendance_percentage", "study_hours_per_week",
+        "assignment_completion_pct", "previous_sgpa", "previous_cgpa",
+        "backlog_count", "course_credits", "semester",
+    ]
+    ca_features2 = [
+        "CA_mark", "attendance_percentage", "study_hours_per_week",
+        "assignment_completion_pct", "previous_sgpa", "previous_cgpa",
+        "backlog_count", "course_credits", "branch", "semester",
+    ]
+    ca_numeric_features2 = [
+        "CA_mark", "attendance_percentage", "study_hours_per_week",
+        "assignment_completion_pct", "previous_sgpa", "previous_cgpa",
+        "backlog_count", "course_credits", "semester",
+    ]
+
+    ca_preprocessor = ColumnTransformer(
+        transformers=[
+            ("numeric", Pipeline([("imputer", SimpleImputer(strategy="median"))]),
+             ca_numeric_features),
+            ("categorical", Pipeline([
+                ("imputer", SimpleImputer(strategy="most_frequent")),
+                ("onehot", OneHotEncoder(handle_unknown="ignore", sparse_output=False)),
+            ]), ["course_type", "branch"]),
+        ]
+    )
+    ca_model1 = Pipeline([
+        ("preprocessor", ca_preprocessor),
+        ("model", HistGradientBoostingRegressor(
+            max_iter=200, learning_rate=0.08, max_leaf_nodes=31,
+            min_samples_leaf=20, l2_regularization=1.0, random_state=42,
+        )),
+    ])
+    ca_model1.fit(X_train[ca_features], y_train)
+    ca_pred1 = ca_model1.predict(X_test[ca_features])
+    ca_model1_metrics_only = {
+        "MAE": float(mean_absolute_error(y_test, ca_pred1)),
+        "RMSE": float(np.sqrt(mean_squared_error(y_test, ca_pred1))),
+        "R2": float(r2_score(y_test, ca_pred1)),
+    }
+    ca_model1_metrics = {
+        "model_name": "Model 1 - End-Term Mark Prediction (CA-only)",
+        "problem_type": "Regression",
+        "selected_algorithm": "HistGradientBoostingRegressor",
+        "dataset": "model1_regression_dataset.csv",
+        "train_samples": int(len(X_train)),
+        "test_samples": int(len(X_test)),
+        "features": ca_features,
+        "target": "TARGET_END_MARKS",
+        "metrics": ca_model1_metrics_only,
+        "random_state": 42,
+        "n_train_students": int(df.iloc[train_idx]["student_id"].nunique()),
+        "n_test_students": int(df.iloc[test_idx]["student_id"].nunique()),
+        "split": "GroupShuffleSplit by student_id, seed 42",
+        "baseline_mae_train_mean": float(
+            mean_absolute_error(y_test, np.full(len(y_test), y_train.mean()))
+        ),
+        "comparison_table": [
+            {"metric": metric, "full_model": float(model1_metrics["metrics"][metric]),
+             "ca_only_model": value}
+            for metric, value in ca_model1_metrics_only.items()
+        ],
+    }
+
+    ca_preprocessor2 = ColumnTransformer(
+        transformers=[
+            ("numeric", Pipeline([("imputer", SimpleImputer(strategy="median"))]),
+             ca_numeric_features2),
+            ("categorical", Pipeline([
+                ("imputer", SimpleImputer(strategy="most_frequent")),
+                ("onehot", OneHotEncoder(handle_unknown="ignore", sparse_output=False)),
+            ]), ["branch"]),
+        ]
+    )
+    ca_model2 = Pipeline([
+        ("preprocessor", ca_preprocessor2),
+        ("model", HistGradientBoostingClassifier(
+            max_iter=200, learning_rate=0.08, max_leaf_nodes=31,
+            min_samples_leaf=20, l2_regularization=1.0,
+            class_weight="balanced", random_state=42,
+        )),
+    ])
+    ca_model2.fit(X2_train[ca_features2], y2_train)
+    ca_pred2 = ca_model2.predict(X2_test[ca_features2])
+    ca_fail_probability = ca_model2.predict_proba(X2_test[ca_features2])[:, 0]
+    ca_fail_precision = precision_score(
+        y2_test, ca_pred2, pos_label=0, zero_division=0
+    )
+    ca_fail_recall = recall_score(
+        y2_test, ca_pred2, pos_label=0, zero_division=0
+    )
+    ca_fail_f1 = f1_score(y2_test, ca_pred2, pos_label=0, zero_division=0)
+    ca_pr_auc = average_precision_score(actual_fail, ca_fail_probability)
+    ca_roc_auc = roc_auc_score(actual_fail, ca_fail_probability)
+    ca_calibration_data = pd.DataFrame({
+        "predicted": ca_fail_probability,
+        "actual": actual_fail.to_numpy(),
+    })
+    ca_calibration_data["bin"] = pd.qcut(
+        ca_calibration_data["predicted"], q=10, duplicates="drop"
+    )
+    ca_calibration = ca_calibration_data.groupby(
+        "bin", observed=True
+    ).agg(mean_predicted=("predicted", "mean"),
+          fraction_positive=("actual", "mean"))
+    ca_threshold_sweep = []
+    for threshold in np.arange(0.05, 1.0, 0.05):
+        flagged = ca_fail_probability >= threshold
+        threshold_precision = precision_score(
+            actual_fail, flagged, zero_division=0
+        )
+        ca_threshold_sweep.append({
+            "threshold": float(round(threshold, 2)),
+            "precision": float(threshold_precision),
+            "recall": float(recall_score(actual_fail, flagged, zero_division=0)),
+            "f1": float(f1_score(actual_fail, flagged, zero_division=0)),
+            "flagged_per_true_fail": float(
+                flagged.sum() / max(actual_fail.sum(), 1)
+            ),
+        })
+    ca_model2_comparison_values = {
+        "FAIL recall": float(ca_fail_recall),
+        "FAIL precision": float(ca_fail_precision),
+        "PR-AUC": float(ca_pr_auc),
+        "ROC-AUC": float(ca_roc_auc),
+        "base rate": base_rate_fail,
+    }
+    full_model2_comparison_values = {
+        "FAIL recall": float(fail_recall),
+        "FAIL precision": float(fail_precision),
+        "PR-AUC": float(model2_metrics["pr_auc"]),
+        "ROC-AUC": float(model2_metrics["roc_auc"]),
+        "base rate": base_rate_fail,
+    }
+    ca_model2_metrics = {
+        "model_name": "HistGradientBoosting Classifier (CA-only)",
+        "task": "Pass/Fail Prediction",
+        "accuracy": float(accuracy_score(y2_test, ca_pred2)),
+        "fail_precision": float(ca_fail_precision),
+        "fail_recall": float(ca_fail_recall),
+        "fail_f1": float(ca_fail_f1),
+        "roc_auc": float(ca_roc_auc),
+        "confusion_matrix": confusion_matrix(
+            y2_test, ca_pred2, labels=[0, 1]
+        ).tolist(),
+        "selected_reason": model2_metrics["selected_reason"],
+        "features": ca_features2,
+        "split": model2_metrics["split"],
+        "n_train_rows": int(len(X2_train)),
+        "n_test_rows": int(len(X2_test)),
+        "n_test_students": int(df2.iloc[test_idx2]["student_id"].nunique()),
+        "fail_rows_test": int(actual_fail.sum()),
+        "base_rate_fail": base_rate_fail,
+        "always_pass_accuracy": float((y2_test == 1).mean()),
+        "pr_auc": float(ca_pr_auc),
+        "precision_lift": float(ca_fail_precision / base_rate_fail),
+        "false_alerts_per_true_fail": float(
+            (1 - ca_fail_precision) / ca_fail_precision
+            if ca_fail_precision else 0
+        ),
+        "threshold_sweep": ca_threshold_sweep,
+        "calibration": {
+            "method": "quantile",
+            "n_bins": 10,
+            "mean_predicted": ca_calibration["mean_predicted"].tolist(),
+            "fraction_positive": ca_calibration["fraction_positive"].tolist(),
+            "brier_score": float(brier_score_loss(
+                actual_fail, ca_fail_probability
+            )),
+        },
+        "comparison_table": [
+            {"metric": metric, "full_model": full_model2_comparison_values[metric],
+             "ca_only_model": ca_model2_comparison_values[metric]}
+            for metric in full_model2_comparison_values
+        ],
+    }
+
+    if save_full_artifacts:
+        assert sklearn.__version__ == "1.6.1"
+        joblib.dump(model1, MODEL_DIR / "model1_endterm_histgradientboosting.pkl")
+        with open(MODEL_DIR / "model1_metrics.json", "w") as metrics_file:
+            json.dump(model1_metrics, metrics_file, indent=4)
+        importance.to_csv(MODEL_DIR / "model1_feature_importance.csv", index=False)
+        assert sklearn.__version__ == "1.6.1"
+        joblib.dump(model2, MODEL_DIR / "model2_pass_fail_histgradientboosting.pkl")
+        with open(MODEL_DIR / "model2_metrics.json", "w") as metrics_file:
+            json.dump(model2_metrics, metrics_file, indent=4)
     assert sklearn.__version__ == "1.6.1"
-    joblib.dump(model1, MODEL_DIR / "model1_endterm_histgradientboosting.pkl")
-    with open(MODEL_DIR / "model1_metrics.json", "w") as metrics_file:
-        json.dump(model1_metrics, metrics_file, indent=4)
-    importance.to_csv(MODEL_DIR / "model1_feature_importance.csv", index=False)
+    joblib.dump(
+        ca_model1, MODEL_DIR / "model1_endterm_ca_only_histgradientboosting.pkl"
+    )
+    with open(MODEL_DIR / "model1_ca_only_metrics.json", "w") as metrics_file:
+        json.dump(ca_model1_metrics, metrics_file, indent=4)
     assert sklearn.__version__ == "1.6.1"
-    joblib.dump(model2, MODEL_DIR / "model2_pass_fail_histgradientboosting.pkl")
-    with open(MODEL_DIR / "model2_metrics.json", "w") as metrics_file:
-        json.dump(model2_metrics, metrics_file, indent=4)
-    print("Saved both pipelines and metrics to", MODEL_DIR)
-    print(json.dumps({"model1": model1_metrics, "model2": model2_metrics}, indent=2))
+    joblib.dump(
+        ca_model2, MODEL_DIR / "model2_pass_fail_ca_only_histgradientboosting.pkl"
+    )
+    with open(MODEL_DIR / "model2_ca_only_metrics.json", "w") as metrics_file:
+        json.dump(ca_model2_metrics, metrics_file, indent=4)
+    if save_full_artifacts:
+        print("Saved full and CA-only pipelines and metrics to", MODEL_DIR)
+    else:
+        print("Saved CA-only pipelines and metrics; full artifacts were not written.")
+    print(json.dumps({
+        "model1": model1_metrics,
+        "model2": model2_metrics,
+        "model1_ca_only": ca_model1_metrics,
+        "model2_ca_only": ca_model2_metrics,
+    }, indent=2))
 
 
 if os.environ.get("RUN_MODEL_RETRAIN", "false").lower() in {"1", "true", "yes", "on"}:
     run_retraining()
+    raise SystemExit(0)
+
+if os.environ.get("RUN_CA_ONLY_RETRAIN", "false").lower() in {"1", "true", "yes", "on"}:
+    run_retraining(save_full_artifacts=False)
     raise SystemExit(0)
 
 if RUN_SIMULATION:

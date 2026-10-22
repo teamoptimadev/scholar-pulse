@@ -1,0 +1,217 @@
+{
+    "model_name": "HistGradientBoosting Classifier (CA-only)",
+    "task": "Pass/Fail Prediction",
+    "accuracy": 0.9551340087662571,
+    "fail_precision": 0.1451925741202549,
+    "fail_recall": 0.9340463458110517,
+    "fail_f1": 0.2513189448441247,
+    "roc_auc": 0.988773841974519,
+    "confusion_matrix": [
+        [
+            524,
+            37
+        ],
+        [
+            3085,
+            65939
+        ]
+    ],
+    "selected_reason": "Highest FAIL Recall and highest ROC-AUC among the three evaluated models.",
+    "features": [
+        "CA_mark",
+        "attendance_percentage",
+        "study_hours_per_week",
+        "assignment_completion_pct",
+        "previous_sgpa",
+        "previous_cgpa",
+        "backlog_count",
+        "course_credits",
+        "branch",
+        "semester"
+    ],
+    "split": "StratifiedGroupKFold by student_id, 5 folds, seed 42 (first fold)",
+    "n_train_rows": 278159,
+    "n_test_rows": 69585,
+    "n_test_students": 1995,
+    "fail_rows_test": 561,
+    "base_rate_fail": 0.008062082345333045,
+    "always_pass_accuracy": 0.991937917654667,
+    "pr_auc": 0.5073280018628997,
+    "precision_lift": 18.009314207055148,
+    "false_alerts_per_true_fail": 5.887404580152673,
+    "threshold_sweep": [
+        {
+            "threshold": 0.05,
+            "precision": 0.08919437340153452,
+            "recall": 0.9946524064171123,
+            "f1": 0.1637083761185272,
+            "flagged_per_true_fail": 11.151515151515152
+        },
+        {
+            "threshold": 0.1,
+            "precision": 0.09747545582047686,
+            "recall": 0.9910873440285205,
+            "f1": 0.17749401436552276,
+            "flagged_per_true_fail": 10.167557932263815
+        },
+        {
+            "threshold": 0.15,
+            "precision": 0.10390097524381095,
+            "recall": 0.9875222816399287,
+            "f1": 0.18801968437128797,
+            "flagged_per_true_fail": 9.50445632798574
+        },
+        {
+            "threshold": 0.2,
+            "precision": 0.11059907834101383,
+            "recall": 0.983957219251337,
+            "f1": 0.1988472622478386,
+            "flagged_per_true_fail": 8.896613190730838
+        },
+        {
+            "threshold": 0.25,
+            "precision": 0.1163429054054054,
+            "recall": 0.982174688057041,
+            "f1": 0.20804228808759676,
+            "flagged_per_true_fail": 8.442067736185383
+        },
+        {
+            "threshold": 0.3,
+            "precision": 0.1220489977728285,
+            "recall": 0.9768270944741533,
+            "f1": 0.21698673529994061,
+            "flagged_per_true_fail": 8.003565062388592
+        },
+        {
+            "threshold": 0.35,
+            "precision": 0.12784958871915394,
+            "recall": 0.9696969696969697,
+            "f1": 0.22591362126245848,
+            "flagged_per_true_fail": 7.5846702317290555
+        },
+        {
+            "threshold": 0.4,
+            "precision": 0.13406156901688182,
+            "recall": 0.9625668449197861,
+            "f1": 0.2353453911527566,
+            "flagged_per_true_fail": 7.180035650623886
+        },
+        {
+            "threshold": 0.45,
+            "precision": 0.13985830490684859,
+            "recall": 0.9500891265597148,
+            "f1": 0.24382433668801465,
+            "flagged_per_true_fail": 6.793226381461675
+        },
+        {
+            "threshold": 0.5,
+            "precision": 0.1451925741202549,
+            "recall": 0.9340463458110517,
+            "f1": 0.2513189448441247,
+            "flagged_per_true_fail": 6.433155080213904
+        },
+        {
+            "threshold": 0.55,
+            "precision": 0.15350488021295475,
+            "recall": 0.9251336898395722,
+            "f1": 0.2633181126331811,
+            "flagged_per_true_fail": 6.026737967914438
+        },
+        {
+            "threshold": 0.6,
+            "precision": 0.16152392947103275,
+            "recall": 0.9144385026737968,
+            "f1": 0.27455177950227455,
+            "flagged_per_true_fail": 5.661319073083779
+        },
+        {
+            "threshold": 0.65,
+            "precision": 0.1726742190181943,
+            "recall": 0.8966131907308378,
+            "f1": 0.2895797351755901,
+            "flagged_per_true_fail": 5.192513368983957
+        },
+        {
+            "threshold": 0.7,
+            "precision": 0.18677189026681698,
+            "recall": 0.8859180035650623,
+            "f1": 0.308504034761018,
+            "flagged_per_true_fail": 4.74331550802139
+        },
+        {
+            "threshold": 0.75,
+            "precision": 0.2055602358887953,
+            "recall": 0.8698752228163993,
+            "f1": 0.33253833049403747,
+            "flagged_per_true_fail": 4.231729055258467
+        },
+        {
+            "threshold": 0.8,
+            "precision": 0.2294921875,
+            "recall": 0.8377896613190731,
+            "f1": 0.36029129934840937,
+            "flagged_per_true_fail": 3.6506238859180034
+        },
+        {
+            "threshold": 0.85,
+            "precision": 0.2636309167165968,
+            "recall": 0.7843137254901961,
+            "f1": 0.39461883408071746,
+            "flagged_per_true_fail": 2.9750445632798574
+        },
+        {
+            "threshold": 0.9,
+            "precision": 0.3194006309148265,
+            "recall": 0.7219251336898396,
+            "f1": 0.4428649535265172,
+            "flagged_per_true_fail": 2.2602495543672014
+        },
+        {
+            "threshold": 0.95,
+            "precision": 0.4581560283687943,
+            "recall": 0.5757575757575758,
+            "f1": 0.5102685624012638,
+            "flagged_per_true_fail": 1.2566844919786095
+        }
+    ],
+    "calibration": {
+        "method": "quantile",
+        "n_bins": 10,
+        "mean_predicted": [
+            0.0006592755170593431,
+            0.5101255780972277
+        ],
+        "fraction_positive": [
+            1.5967808897263117e-05,
+            0.08047133208794367
+        ],
+        "brier_score": 0.03128714553772025
+    },
+    "comparison_table": [
+        {
+            "metric": "FAIL recall",
+            "full_model": 0.9518716577540107,
+            "ca_only_model": 0.9340463458110517
+        },
+        {
+            "metric": "FAIL precision",
+            "full_model": 0.1606015037593985,
+            "ca_only_model": 0.1451925741202549
+        },
+        {
+            "metric": "PR-AUC",
+            "full_model": 0.5849150073772301,
+            "ca_only_model": 0.5073280018628997
+        },
+        {
+            "metric": "ROC-AUC",
+            "full_model": 0.9912483616745048,
+            "ca_only_model": 0.988773841974519
+        },
+        {
+            "metric": "base rate",
+            "full_model": 0.008062082345333045,
+            "ca_only_model": 0.008062082345333045
+        }
+    ]
+}

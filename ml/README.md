@@ -115,6 +115,33 @@ The following table compares the previous row-level evaluation with the new stud
 | Model 2 ROC-AUC | 0.9906 | 0.9912 |
 | Model 2 PR-AUC | Not recorded | 0.5849 |
 
+## CA-only variants
+
+The CA-only pipelines use the same student-level train/test split, preprocessing, estimator hyperparameters, and default prediction decisions as the full models, but omit `MID_mark`. They retain the original CSV representation of missing prior GPA values: semester-1 `previous_sgpa` and `previous_cgpa` values are NaN, which the pipeline's numeric median imputer handles.
+
+| Artifact | Input columns, in required order |
+|----------|----------------------------------|
+| `model1_endterm_ca_only_histgradientboosting.pkl` | `CA_mark`, `attendance_percentage`, `study_hours_per_week`, `assignment_completion_pct`, `previous_sgpa`, `previous_cgpa`, `backlog_count`, `course_credits`, `course_type`, `branch`, `semester` |
+| `model2_pass_fail_ca_only_histgradientboosting.pkl` | `CA_mark`, `attendance_percentage`, `study_hours_per_week`, `assignment_completion_pct`, `previous_sgpa`, `previous_cgpa`, `backlog_count`, `course_credits`, `branch`, `semester` |
+
+Metrics and the held-out comparison against the full models are in `model1_ca_only_metrics.json` and `model2_ca_only_metrics.json`. To train only the CA-only variants from the repository root, run:
+
+```bash
+cd backend
+RUN_CA_ONLY_RETRAIN=1 uv run python ../ml/models/student_results_dataset_and_models_training.py
+```
+
+| Metric | Model 1 full | Model 1 CA-only | Model 2 full | Model 2 CA-only |
+|--------|-------------:|---------------:|-------------:|---------------:|
+| MAE | 5.6549 | 5.9428 | — | — |
+| RMSE | 7.0895 | 7.4585 | — | — |
+| R² | 0.7574 | 0.7315 | — | — |
+| FAIL recall | — | — | 0.9519 | 0.9340 |
+| FAIL precision | — | — | 0.1606 | 0.1452 |
+| PR-AUC | — | — | 0.5849 | 0.5073 |
+| ROC-AUC | — | — | 0.9912 | 0.9888 |
+| FAIL base rate | — | — | 0.0081 | 0.0081 |
+
 ## Inference
 
 ```python
