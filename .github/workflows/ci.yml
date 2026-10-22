@@ -31,9 +31,10 @@ jobs:
           --health-timeout 5s
           --health-retries 5
     env:
-      DATABASE_URL: postgresql+psycopg://localhost:5432/academic_analytics
+      DATABASE_URL: postgresql+psycopg://prj649:test@localhost:5432/academic_analytics
       PGUSER: prj649
       PGPASSWORD: test
+      ENVIRONMENT: test
       SECRET_KEY: ci-test-secret-key-min-32-chars-long
     steps:
       - uses: actions/checkout@v4
@@ -45,12 +46,10 @@ jobs:
         run: uv sync --group dev
       - name: Apply migrations
         run: uv run alembic upgrade head
-      - name: Seed test data
-        run: uv run python scripts/seed.py --scale 100
       - name: Lint backend
-        run: uv run ruff check app tests
+        run: uv run ruff check .
       - name: Run backend tests
-        run: uv run pytest
+        run: uv run pytest tests
 
   client:
     name: Client (TypeScript)
