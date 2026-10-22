@@ -1,20 +1,180 @@
 {
     "model_name": "HistGradientBoosting Classifier",
     "task": "Pass/Fail Prediction",
-    "accuracy": 0.9533134912076378,
-    "fail_precision": 0.16142448661294515,
-    "fail_recall": 0.9672897196261683,
-    "fail_f1": 0.27667631989307195,
-    "roc_auc": 0.9905770891617115,
+    "accuracy": 0.9595027664008048,
+    "fail_precision": 0.1606015037593985,
+    "fail_recall": 0.9518716577540107,
+    "fail_f1": 0.2748327328872877,
+    "roc_auc": 0.9912483616745048,
     "confusion_matrix": [
         [
-            621,
-            21
+            534,
+            27
         ],
         [
-            3226,
-            65681
+            2791,
+            66233
         ]
     ],
-    "selected_reason": "Highest FAIL Recall and highest ROC-AUC among the three evaluated models."
+    "selected_reason": "Highest FAIL Recall and highest ROC-AUC among the three evaluated models.",
+    "split": "StratifiedGroupKFold by student_id, 5 folds, seed 42 (first fold)",
+    "n_train_rows": 278159,
+    "n_test_rows": 69585,
+    "n_test_students": 1995,
+    "fail_rows_test": 561,
+    "base_rate_fail": 0.008062082345333045,
+    "always_pass_accuracy": 0.991937917654667,
+    "pr_auc": 0.5849150073772301,
+    "precision_lift": 19.920598287161756,
+    "false_alerts_per_true_fail": 5.226591760299625,
+    "threshold_sweep": [
+        {
+            "threshold": 0.05,
+            "precision": 0.09529471717343299,
+            "recall": 1.0,
+            "f1": 0.17400744416873448,
+            "flagged_per_true_fail": 10.493761140819965
+        },
+        {
+            "threshold": 0.1,
+            "precision": 0.10515386067585426,
+            "recall": 0.9928698752228164,
+            "f1": 0.19016729259132809,
+            "flagged_per_true_fail": 9.442067736185383
+        },
+        {
+            "threshold": 0.15,
+            "precision": 0.11269035532994924,
+            "recall": 0.9893048128342246,
+            "f1": 0.2023332118118848,
+            "flagged_per_true_fail": 8.778966131907309
+        },
+        {
+            "threshold": 0.2,
+            "precision": 0.11946424713761071,
+            "recall": 0.9857397504456328,
+            "f1": 0.21310211946050098,
+            "flagged_per_true_fail": 8.251336898395722
+        },
+        {
+            "threshold": 0.25,
+            "precision": 0.12614259597806216,
+            "recall": 0.983957219251337,
+            "f1": 0.22361758152724326,
+            "flagged_per_true_fail": 7.80035650623886
+        },
+        {
+            "threshold": 0.3,
+            "precision": 0.1322214164853759,
+            "recall": 0.9750445632798574,
+            "f1": 0.23286504895700297,
+            "flagged_per_true_fail": 7.374331550802139
+        },
+        {
+            "threshold": 0.35,
+            "precision": 0.1397547266223812,
+            "recall": 0.9750445632798574,
+            "f1": 0.24446927374301675,
+            "flagged_per_true_fail": 6.976827094474153
+        },
+        {
+            "threshold": 0.4,
+            "precision": 0.14605227701428186,
+            "recall": 0.966131907308378,
+            "f1": 0.25374531835205993,
+            "flagged_per_true_fail": 6.614973262032086
+        },
+        {
+            "threshold": 0.45,
+            "precision": 0.15238365493757094,
+            "recall": 0.9572192513368984,
+            "f1": 0.26291309669522644,
+            "flagged_per_true_fail": 6.281639928698752
+        },
+        {
+            "threshold": 0.5,
+            "precision": 0.1606015037593985,
+            "recall": 0.9518716577540107,
+            "f1": 0.2748327328872877,
+            "flagged_per_true_fail": 5.926916221033868
+        },
+        {
+            "threshold": 0.55,
+            "precision": 0.16820349761526232,
+            "recall": 0.9429590017825312,
+            "f1": 0.2854830005396654,
+            "flagged_per_true_fail": 5.606060606060606
+        },
+        {
+            "threshold": 0.6,
+            "precision": 0.177283451297607,
+            "recall": 0.9376114081996435,
+            "f1": 0.2981859410430839,
+            "flagged_per_true_fail": 5.288770053475936
+        },
+        {
+            "threshold": 0.65,
+            "precision": 0.18831168831168832,
+            "recall": 0.93048128342246,
+            "f1": 0.3132313231323132,
+            "flagged_per_true_fail": 4.9411764705882355
+        },
+        {
+            "threshold": 0.7,
+            "precision": 0.20298390263054575,
+            "recall": 0.9215686274509803,
+            "f1": 0.3326898326898327,
+            "flagged_per_true_fail": 4.540106951871658
+        },
+        {
+            "threshold": 0.75,
+            "precision": 0.22275711159737419,
+            "recall": 0.9073083778966132,
+            "f1": 0.3576950105411103,
+            "flagged_per_true_fail": 4.073083778966132
+        },
+        {
+            "threshold": 0.8,
+            "precision": 0.2473604826546003,
+            "recall": 0.8770053475935828,
+            "f1": 0.38588235294117645,
+            "flagged_per_true_fail": 3.5454545454545454
+        },
+        {
+            "threshold": 0.85,
+            "precision": 0.28380836870830806,
+            "recall": 0.8342245989304813,
+            "f1": 0.4235294117647059,
+            "flagged_per_true_fail": 2.9393939393939394
+        },
+        {
+            "threshold": 0.9,
+            "precision": 0.3487603305785124,
+            "recall": 0.7522281639928698,
+            "f1": 0.47656691134952006,
+            "flagged_per_true_fail": 2.156862745098039
+        },
+        {
+            "threshold": 0.95,
+            "precision": 0.4838235294117647,
+            "recall": 0.5864527629233511,
+            "f1": 0.5302175664786463,
+            "flagged_per_true_fail": 1.2121212121212122
+        }
+    ],
+    "calibration": {
+        "method": "quantile",
+        "n_bins": 10,
+        "mean_predicted": [
+            0.0008834088480002451,
+            0.009063068277028238,
+            0.4781689171370899
+        ],
+        "fraction_positive": [
+            0.0,
+            0.0,
+            0.08061503089524356
+        ],
+        "brier_score": 0.028773505434463106
+    }
 }

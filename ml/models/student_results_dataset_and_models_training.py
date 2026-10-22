@@ -10,347 +10,622 @@ Original file is located at
 import os
 import gc
 import random
+import json
+import sys
 import numpy as np
 import pandas as pd
+from pathlib import Path
 
 # ---------------------------------------------------------
 # 0. CONFIGURATION & CONSTANTS
 # ---------------------------------------------------------
-OUTPUT_DIR = "university_data"
-os.makedirs(OUTPUT_DIR, exist_ok=True)
+REPO_ROOT = Path(__file__).resolve().parents[2]
 
-TOTAL_STUDENTS = 10000  # Adjust as needed (e.g., 10000 for fast test, 131497 for full run)
-SEED = 42
+def resolve_repo_path(environment_variable, default):
+    path = Path(os.environ.get(environment_variable, default))
+    return path if path.is_absolute() else REPO_ROOT / path
 
-np.random.seed(SEED)
-random.seed(SEED)
+DATA_DIR = resolve_repo_path("DATA_DIR", "university_data")
+MODEL_DIR = resolve_repo_path("MODEL_DIR", "ml/models")
+OUTPUT_DIR = DATA_DIR
+RUN_SIMULATION = os.environ.get("RUN_SIMULATION", "false").lower() in {
+    "1", "true", "yes", "on"
+}
 
-BRANCHES = ['CSE', 'ECE', 'ME', 'CE', 'EEE']
-ENTRY_TYPES = ['REGULAR', 'LATERAL_ENTRY']
-SEM_YEAR_OFFSETS = {1: 0, 2: 0, 3: 1, 4: 1, 5: 2, 6: 2, 7: 3, 8: 3}
+try:
+    display
+except NameError:
+    def display(value):
+        print(value)
 
-# Helper functions
-def calculate_grade(pct, c_type):
-    if c_type == 'NON_CREDIT':
-        return ('P' if pct >= 40 else 'F', 0.0, 'PASS' if pct >= 40 else 'FAIL')
-    if pct >= 90: return ('O', 10.0, 'PASS')
-    elif pct >= 80: return ('A+', 9.0, 'PASS')
-    elif pct >= 70: return ('A', 8.0, 'PASS')
-    elif pct >= 60: return ('B+', 7.0, 'PASS')
-    elif pct >= 50: return ('B', 6.0, 'PASS')
-    elif pct >= 40: return ('C', 5.0, 'PASS')
-    else: return ('F', 0.0, 'FAIL')
 
-# ---------------------------------------------------------
-# 1. GENERATE COURSE MASTER
-# ---------------------------------------------------------
-print("[1/6] Generating Course Master...")
-courses_data = []
-course_types = ['THEORY', 'LAB', 'PROJECT', 'NON_CREDIT']
-assessment_types = ['CA_MID_END', 'CA_END', 'PRACTICAL', 'PROJECT']
+def make_group_split(df, label=None, test_size=0.20, seed=42):
+    from sklearn.model_selection import GroupShuffleSplit, StratifiedGroupKFold
 
-for b_code in BRANCHES:
-    for sem in range(1, 9):
-        for c_idx in range(1, 6):  # 5 courses per semester
-            c_type = np.random.choice(course_types, p=[0.6, 0.25, 0.05, 0.1])
-            if c_type == 'LAB':
-                a_type = 'PRACTICAL'
-                credits = 2
-            elif c_type == 'PROJECT':
-                a_type = 'PROJECT'
-                credits = 4
-            elif c_type == 'NON_CREDIT':
-                a_type = 'CA_END'
-                credits = 0
-            else:
-                a_type = 'CA_MID_END'
-                credits = 3
+    groups = df["student_id"]
+    if label is None:
+        train_idx, test_idx = next(
+            GroupShuffleSplit(
+                n_splits=1, test_size=test_size, random_state=seed
+            ).split(df, groups=groups)
+        )
+    else:
+        train_idx, test_idx = next(
+            StratifiedGroupKFold(
+                n_splits=5, shuffle=True, random_state=seed
+            ).split(df, label, groups=groups)
+        )
 
-            courses_data.append({
-                'course_code': f"{b_code}{sem}0{c_idx}",
-                'course_name': f"{b_code} Subject {sem}-{c_idx}",
-                'branch_code': b_code,
-                'semester': sem,
-                'course_type': c_type,
-                'credits': credits,
-                'assessment_type': a_type
-            })
+    train_students = set(groups.iloc[train_idx])
+    test_students = set(groups.iloc[test_idx])
+    shared_students = train_students.intersection(test_students)
+    assert not shared_students, (
+        f"Student leakage detected: {len(shared_students)} shared students"
+    )
+    print(
+        f"Group split: train={len(train_idx):,} rows/"
+        f"{len(train_students):,} students; test={len(test_idx):,} rows/"
+        f"{len(test_students):,} students; shared_students={len(shared_students)}"
+    )
+    return train_idx, test_idx
 
-df_courses = pd.DataFrame(courses_data)
-df_courses.to_csv(os.path.join(OUTPUT_DIR, "course_master.csv"), index=False)
 
-# ---------------------------------------------------------
-# 2. GENERATE STUDENT MASTER
-# ---------------------------------------------------------
-print("[2/6] Generating Student Master...")
-students_data = []
-for i in range(1, TOTAL_STUDENTS + 1):
-    b_code = np.random.choice(BRANCHES)
-    entry = np.random.choice(ENTRY_TYPES, p=[0.85, 0.15])
-    batch = np.random.choice([2020, 2021, 2022, 2023])
+def run_retraining():
+    import joblib
+    import sklearn
+    from sklearn.compose import ColumnTransformer
+    from sklearn.ensemble import HistGradientBoostingClassifier, HistGradientBoostingRegressor
+    from sklearn.impute import SimpleImputer
+    from sklearn.inspection import permutation_importance
+    from sklearn.metrics import (
+        accuracy_score,
+        average_precision_score,
+        brier_score_loss,
+        confusion_matrix,
+        f1_score,
+        mean_absolute_error,
+        mean_squared_error,
+        precision_score,
+        r2_score,
+        recall_score,
+        roc_auc_score,
+    )
+    from sklearn.pipeline import Pipeline
+    from sklearn.preprocessing import OneHotEncoder
 
-    students_data.append({
-        'student_id': i,
-        'registration_number': f"REG{batch}{b_code}{i:05d}",
-        'batch_year': batch,
-        'branch_code': b_code,
-        'entry_type': entry,
-        '_latent_ability': np.random.normal(0, 1),
-        '_study_habit': np.random.normal(0, 1),
-        '_attendance_incl': np.random.normal(0, 1)
+    if sklearn.__version__ != "1.6.1":
+        raise RuntimeError(
+            f"Expected scikit-learn 1.6.1, found {sklearn.__version__}"
+        )
+
+    os.makedirs(MODEL_DIR, exist_ok=True)
+    df = pd.read_csv(DATA_DIR / "model1_regression_dataset.csv")
+    features = [
+        "CA_mark", "MID_mark", "attendance_percentage",
+        "study_hours_per_week", "assignment_completion_pct",
+        "previous_sgpa", "previous_cgpa", "backlog_count",
+        "course_credits", "course_type", "branch", "semester",
+    ]
+    numeric_features = [
+        "CA_mark", "MID_mark", "attendance_percentage",
+        "study_hours_per_week", "assignment_completion_pct",
+        "previous_sgpa", "previous_cgpa", "backlog_count",
+        "course_credits", "semester",
+    ]
+    categorical_features = ["course_type", "branch"]
+    X, y = df[features], df["TARGET_END_MARKS"]
+    train_idx, test_idx = make_group_split(df)
+    X_train, X_test = X.iloc[train_idx], X.iloc[test_idx]
+    y_train, y_test = y.iloc[train_idx], y.iloc[test_idx]
+    preprocessor = ColumnTransformer(
+        transformers=[
+            ("numeric", Pipeline([("imputer", SimpleImputer(strategy="median"))]),
+             numeric_features),
+            ("categorical", Pipeline([
+                ("imputer", SimpleImputer(strategy="most_frequent")),
+                ("onehot", OneHotEncoder(handle_unknown="ignore", sparse_output=False)),
+            ]), categorical_features),
+        ]
+    )
+    model1 = Pipeline([
+        ("preprocessor", preprocessor),
+        ("model", HistGradientBoostingRegressor(
+            max_iter=200, learning_rate=0.08, max_leaf_nodes=31,
+            min_samples_leaf=20, l2_regularization=1.0, random_state=42,
+        )),
+    ])
+    model1.fit(X_train, y_train)
+    pred1 = model1.predict(X_test)
+    model1_mae = mean_absolute_error(y_test, pred1)
+    model1_rmse = np.sqrt(mean_squared_error(y_test, pred1))
+    model1_r2 = r2_score(y_test, pred1)
+    importance_result = permutation_importance(
+        model1, X_test, y_test, scoring="neg_root_mean_squared_error",
+        n_repeats=3, random_state=42, n_jobs=-1,
+    )
+    importance = pd.DataFrame({
+        "Feature": X_test.columns,
+        "Importance": importance_result.importances_mean,
+        "Std": importance_result.importances_std,
+    }).sort_values("Importance", ascending=False).reset_index(drop=True)
+    model1_metrics = {
+        "model_name": "Model 1 - End-Term Mark Prediction",
+        "problem_type": "Regression",
+        "selected_algorithm": "HistGradientBoostingRegressor",
+        "dataset": "model1_regression_dataset.csv",
+        "train_samples": int(len(X_train)),
+        "test_samples": int(len(X_test)),
+        "features": features,
+        "target": "TARGET_END_MARKS",
+        "metrics": {"MAE": float(model1_mae), "RMSE": float(model1_rmse),
+                    "R2": float(model1_r2)},
+        "random_state": 42,
+        "n_train_students": int(df.iloc[train_idx]["student_id"].nunique()),
+        "n_test_students": int(df.iloc[test_idx]["student_id"].nunique()),
+        "split": "GroupShuffleSplit by student_id, seed 42",
+        "baseline_mae_train_mean": float(
+            mean_absolute_error(y_test, np.full(len(y_test), y_train.mean()))
+        ),
+    }
+
+    df2 = pd.read_csv(DATA_DIR / "model2_pass_fail_dataset.csv")
+    features2 = [
+        "CA_mark", "MID_mark", "attendance_percentage",
+        "study_hours_per_week", "assignment_completion_pct",
+        "previous_sgpa", "previous_cgpa", "backlog_count",
+        "course_credits", "branch", "semester",
+    ]
+    numeric_features2 = [
+        "CA_mark", "MID_mark", "attendance_percentage",
+        "study_hours_per_week", "assignment_completion_pct",
+        "previous_sgpa", "previous_cgpa", "backlog_count",
+        "course_credits", "semester",
+    ]
+    X2, y2 = df2[features2], df2["TARGET_PASS_FAIL"]
+    train_idx2, test_idx2 = make_group_split(df2, label=y2)
+    X2_train, X2_test = X2.iloc[train_idx2], X2.iloc[test_idx2]
+    y2_train, y2_test = y2.iloc[train_idx2], y2.iloc[test_idx2]
+    preprocessor2 = ColumnTransformer(
+        transformers=[
+            ("numeric", Pipeline([("imputer", SimpleImputer(strategy="median"))]),
+             numeric_features2),
+            ("categorical", Pipeline([
+                ("imputer", SimpleImputer(strategy="most_frequent")),
+                ("onehot", OneHotEncoder(handle_unknown="ignore", sparse_output=False)),
+            ]), ["branch"]),
+        ]
+    )
+    model2 = Pipeline([
+        ("preprocessor", preprocessor2),
+        ("model", HistGradientBoostingClassifier(
+            max_iter=200, learning_rate=0.08, max_leaf_nodes=31,
+            min_samples_leaf=20, l2_regularization=1.0,
+            class_weight="balanced", random_state=42,
+        )),
+    ])
+    model2.fit(X2_train, y2_train)
+    pred2 = model2.predict(X2_test)
+    fail_probability = model2.predict_proba(X2_test)[:, 0]
+    actual_fail = (y2_test == 0).astype(int)
+    fail_precision = precision_score(y2_test, pred2, pos_label=0, zero_division=0)
+    fail_recall = recall_score(y2_test, pred2, pos_label=0, zero_division=0)
+    fail_f1 = f1_score(y2_test, pred2, pos_label=0, zero_division=0)
+    base_rate_fail = float(actual_fail.mean())
+    calibration_data = pd.DataFrame({
+        "predicted": fail_probability, "actual": actual_fail.to_numpy(),
     })
+    calibration_data["bin"] = pd.qcut(
+        calibration_data["predicted"], q=10, duplicates="drop"
+    )
+    calibration = calibration_data.groupby(
+        "bin", observed=True
+    ).agg(mean_predicted=("predicted", "mean"),
+          fraction_positive=("actual", "mean"))
+    threshold_sweep = []
+    for threshold in np.arange(0.05, 1.0, 0.05):
+        flagged = fail_probability >= threshold
+        threshold_precision = precision_score(
+            actual_fail, flagged, zero_division=0
+        )
+        threshold_sweep.append({
+            "threshold": float(round(threshold, 2)),
+            "precision": float(threshold_precision),
+            "recall": float(recall_score(actual_fail, flagged, zero_division=0)),
+            "f1": float(f1_score(actual_fail, flagged, zero_division=0)),
+            "flagged_per_true_fail": float(
+                flagged.sum() / max(actual_fail.sum(), 1)
+            ),
+        })
+    model2_metrics = {
+        "model_name": "HistGradientBoosting Classifier",
+        "task": "Pass/Fail Prediction",
+        "accuracy": float(accuracy_score(y2_test, pred2)),
+        "fail_precision": float(fail_precision),
+        "fail_recall": float(fail_recall),
+        "fail_f1": float(fail_f1),
+        "roc_auc": float(roc_auc_score(actual_fail, fail_probability)),
+        "confusion_matrix": confusion_matrix(y2_test, pred2, labels=[0, 1]).tolist(),
+        "selected_reason": (
+            "Highest FAIL Recall and highest ROC-AUC among the three evaluated models."
+        ),
+        "split": "StratifiedGroupKFold by student_id, 5 folds, seed 42 (first fold)",
+        "n_train_rows": int(len(X2_train)),
+        "n_test_rows": int(len(X2_test)),
+        "n_test_students": int(df2.iloc[test_idx2]["student_id"].nunique()),
+        "fail_rows_test": int(actual_fail.sum()),
+        "base_rate_fail": base_rate_fail,
+        "always_pass_accuracy": float((y2_test == 1).mean()),
+        "pr_auc": float(average_precision_score(actual_fail, fail_probability)),
+        "precision_lift": float(fail_precision / base_rate_fail),
+        "false_alerts_per_true_fail": float(
+            (1 - fail_precision) / fail_precision if fail_precision else 0
+        ),
+        "threshold_sweep": threshold_sweep,
+        "calibration": {
+            "method": "quantile",
+            "n_bins": 10,
+            "mean_predicted": calibration["mean_predicted"].tolist(),
+            "fraction_positive": calibration["fraction_positive"].tolist(),
+            "brier_score": float(brier_score_loss(actual_fail, fail_probability)),
+        },
+    }
 
-df_students = pd.DataFrame(students_data)
-df_students.to_csv(os.path.join(OUTPUT_DIR, "student_master.csv"), index=False)
+    assert sklearn.__version__ == "1.6.1"
+    joblib.dump(model1, MODEL_DIR / "model1_endterm_histgradientboosting.pkl")
+    with open(MODEL_DIR / "model1_metrics.json", "w") as metrics_file:
+        json.dump(model1_metrics, metrics_file, indent=4)
+    importance.to_csv(MODEL_DIR / "model1_feature_importance.csv", index=False)
+    assert sklearn.__version__ == "1.6.1"
+    joblib.dump(model2, MODEL_DIR / "model2_pass_fail_histgradientboosting.pkl")
+    with open(MODEL_DIR / "model2_metrics.json", "w") as metrics_file:
+        json.dump(model2_metrics, metrics_file, indent=4)
+    print("Saved both pipelines and metrics to", MODEL_DIR)
+    print(json.dumps({"model1": model1_metrics, "model2": model2_metrics}, indent=2))
 
-# ---------------------------------------------------------
-# 3. RUN SIMULATION & WRITE CSVs
-# ---------------------------------------------------------
-print("[3/6] Running Academic Engine Simulation (Chunked Writing)...")
 
-course_lookup = df_courses.groupby(['branch_code', 'semester'])
+if os.environ.get("RUN_MODEL_RETRAIN", "false").lower() in {"1", "true", "yes", "on"}:
+    run_retraining()
+    raise SystemExit(0)
 
-files_to_init = [
-    ("assessment_marks.csv", ['student_id', 'registration_number', 'semester', 'academic_year', 'course_code', 'course_name', 'course_type', 'credits', 'component', 'marks', 'max_marks', 'percentage']),
-    ("semester_results.csv", ['student_id', 'registration_number', 'semester', 'academic_year', 'course_code', 'course_name', 'credits', 'CA', 'MID', 'END', 'PRACTICAL', 'TOTAL_MARKS', 'PERCENTAGE', 'GRADE', 'GRADE_POINT', 'RESULT_STATUS', 'ATTEMPT_TYPE']),
-    ("student_semester_features.csv", ['student_id', 'registration_number', 'semester', 'academic_year', 'attendance_percentage', 'study_hours_per_week', 'assignments_completed_percentage', 'class_participation', 'sgpa', 'cgpa', 'previous_sgpa', 'previous_cgpa', 'backlog_count', 'current_failed_courses', 'low_performance_course_count', 'performance_trend']),
-    ("model1_regression_dataset.csv", ['student_id', 'course_code', 'branch', 'semester', 'course_credits', 'course_type', 'CA_mark', 'MID_mark', 'attendance_percentage', 'study_hours_per_week', 'assignment_completion_pct', 'previous_sgpa', 'previous_cgpa', 'backlog_count', 'TARGET_END_MARKS']),
-    ("model2_pass_fail_dataset.csv", ['student_id', 'course_code', 'branch', 'semester', 'course_credits', 'CA_mark', 'MID_mark', 'attendance_percentage', 'study_hours_per_week', 'assignment_completion_pct', 'previous_sgpa', 'previous_cgpa', 'backlog_count', 'TARGET_PASS_FAIL']),
-    ("risk_features_dataset.csv", ['student_id', 'semester', 'branch', 'attendance_percentage', 'study_hours_per_week', 'assignment_completion_percentage', 'previous_sgpa', 'previous_cgpa', 'backlog_count', 'current_failed_courses', 'low_performance_course_count', 'performance_trend', 'INDEPENDENT_RISK_LABEL'])
-]
+if RUN_SIMULATION:
+    os.makedirs(OUTPUT_DIR, exist_ok=True)
+    TOTAL_STUDENTS = 10000  # Adjust as needed (e.g., 10000 for fast test, 131497 for full run)
+    SEED = 42
 
-# Create CSV files with headers
-for fname, cols in files_to_init:
-    fpath = os.path.join(OUTPUT_DIR, fname)
-    pd.DataFrame(columns=cols).to_csv(fpath, index=False)
+    np.random.seed(SEED)
+    random.seed(SEED)
 
-buffers = {fname: [] for fname, _ in files_to_init}
+    BRANCHES = ['CSE', 'ECE', 'ME', 'CE', 'EEE']
+    ENTRY_TYPES = ['REGULAR', 'LATERAL_ENTRY']
+    SEM_YEAR_OFFSETS = {1: 0, 2: 0, 3: 1, 4: 1, 5: 2, 6: 2, 7: 3, 8: 3}
 
-def flush_buffers():
-    for fname, _ in files_to_init:
-        if buffers[fname]:
-            fpath = os.path.join(OUTPUT_DIR, fname)
-            pd.DataFrame(buffers[fname]).to_csv(fpath, mode='a', header=False, index=False)
-            buffers[fname].clear()
-    gc.collect()
+    # Helper functions
+    def calculate_grade(pct, c_type):
+        if c_type == 'NON_CREDIT':
+            return ('P' if pct >= 40 else 'F', 0.0, 'PASS' if pct >= 40 else 'FAIL')
+        if pct >= 90: return ('O', 10.0, 'PASS')
+        elif pct >= 80: return ('A+', 9.0, 'PASS')
+        elif pct >= 70: return ('A', 8.0, 'PASS')
+        elif pct >= 60: return ('B+', 7.0, 'PASS')
+        elif pct >= 50: return ('B', 6.0, 'PASS')
+        elif pct >= 40: return ('C', 5.0, 'PASS')
+        else: return ('F', 0.0, 'FAIL')
 
-# Main processing loop
-for idx, student in df_students.iterrows():
-    if idx % 2000 == 0 and idx > 0:
-        print(f"    Processed {idx}/{TOTAL_STUDENTS} students... (Flushing buffer to disk)")
-        flush_buffers()
+    # ---------------------------------------------------------
+    # 1. GENERATE COURSE MASTER
+    # ---------------------------------------------------------
+    print("[1/6] Generating Course Master...")
+    courses_data = []
+    course_types = ['THEORY', 'LAB', 'PROJECT', 'NON_CREDIT']
+    assessment_types = ['CA_MID_END', 'CA_END', 'PRACTICAL', 'PROJECT']
 
-    s_id = student['student_id']
-    r_num = student['registration_number']
-    b_year = student['batch_year']
-    b_code = student['branch_code']
-    l_ability = student['_latent_ability']
-    l_habit = student['_study_habit']
-    l_att = student['_attendance_incl']
+    for b_code in BRANCHES:
+        for sem in range(1, 9):
+            for c_idx in range(1, 6):  # 5 courses per semester
+                c_type = np.random.choice(course_types, p=[0.6, 0.25, 0.05, 0.1])
+                if c_type == 'LAB':
+                    a_type = 'PRACTICAL'
+                    credits = 2
+                elif c_type == 'PROJECT':
+                    a_type = 'PROJECT'
+                    credits = 4
+                elif c_type == 'NON_CREDIT':
+                    a_type = 'CA_END'
+                    credits = 0
+                else:
+                    a_type = 'CA_MID_END'
+                    credits = 3
 
-    cum_credits = 0
-    cum_grade_points = 0.0
-    active_backlogs = []
-    prev_sgpas = []
+                courses_data.append({
+                    'course_code': f"{b_code}{sem}0{c_idx}",
+                    'course_name': f"{b_code} Subject {sem}-{c_idx}",
+                    'branch_code': b_code,
+                    'semester': sem,
+                    'course_type': c_type,
+                    'credits': credits,
+                    'assessment_type': a_type
+                })
 
-    start_sem = 3 if student['entry_type'] == 'LATERAL_ENTRY' else 1
+    df_courses = pd.DataFrame(courses_data)
+    df_courses.to_csv(os.path.join(OUTPUT_DIR, "course_master.csv"), index=False)
 
-    for sem in range(start_sem, 9):
-        acad_year = b_year + SEM_YEAR_OFFSETS[sem]
+    # ---------------------------------------------------------
+    # 2. GENERATE STUDENT MASTER
+    # ---------------------------------------------------------
+    print("[2/6] Generating Student Master...")
+    students_data = []
+    for i in range(1, TOTAL_STUDENTS + 1):
+        b_code = np.random.choice(BRANCHES)
+        entry = np.random.choice(ENTRY_TYPES, p=[0.85, 0.15])
+        batch = np.random.choice([2020, 2021, 2022, 2023])
 
-        att_pct = np.clip(75 + l_att * 10 + np.random.normal(0, 7), 40, 100)
-        study_hrs = np.clip(18 + l_habit * 6 + np.random.normal(0, 4), 2, 40)
-        assign_completion = np.clip(70 + l_habit * 12 + att_pct * 0.2 + np.random.normal(0, 8), 30, 100)
-        class_part = np.clip(50 + l_ability * 15 + att_pct * 0.3 + np.random.normal(0, 10), 0, 100)
+        students_data.append({
+            'student_id': i,
+            'registration_number': f"REG{batch}{b_code}{i:05d}",
+            'batch_year': batch,
+            'branch_code': b_code,
+            'entry_type': entry,
+            '_latent_ability': np.random.normal(0, 1),
+            '_study_habit': np.random.normal(0, 1),
+            '_attendance_incl': np.random.normal(0, 1)
+        })
 
-        sem_courses = course_lookup.get_group((b_code, sem))
+    df_students = pd.DataFrame(students_data)
+    df_students.to_csv(os.path.join(OUTPUT_DIR, "student_master.csv"), index=False)
 
-        sem_credits = 0
-        sem_weighted_gp = 0.0
-        sem_failed_courses = 0
-        sem_low_perf_courses = 0
+    # ---------------------------------------------------------
+    # 3. RUN SIMULATION & WRITE CSVs
+    # ---------------------------------------------------------
+    print("[3/6] Running Academic Engine Simulation (Chunked Writing)...")
 
-        for _, c_row in sem_courses.iterrows():
-            c_code = c_row['course_code']
-            c_name = c_row['course_name']
-            c_type = c_row['course_type']
-            credits = c_row['credits']
-            a_type = c_row['assessment_type']
+    course_lookup = df_courses.groupby(['branch_code', 'semester'])
 
-            base_score = np.clip(55 + (l_ability * 12) + (att_pct * 0.2) + (study_hrs * 0.5) + np.random.normal(0, 8), 10, 99)
+    files_to_init = [
+        ("assessment_marks.csv", ['student_id', 'registration_number', 'semester', 'academic_year', 'course_code', 'course_name', 'course_type', 'credits', 'component', 'marks', 'max_marks', 'percentage']),
+        ("semester_results.csv", ['student_id', 'registration_number', 'semester', 'academic_year', 'course_code', 'course_name', 'credits', 'CA', 'MID', 'END', 'PRACTICAL', 'TOTAL_MARKS', 'PERCENTAGE', 'GRADE', 'GRADE_POINT', 'RESULT_STATUS', 'ATTEMPT_TYPE']),
+        ("student_semester_features.csv", ['student_id', 'registration_number', 'semester', 'academic_year', 'attendance_percentage', 'study_hours_per_week', 'assignments_completed_percentage', 'class_participation', 'sgpa', 'cgpa', 'previous_sgpa', 'previous_cgpa', 'backlog_count', 'current_failed_courses', 'low_performance_course_count', 'performance_trend']),
+        ("model1_regression_dataset.csv", ['student_id', 'course_code', 'branch', 'semester', 'course_credits', 'course_type', 'CA_mark', 'MID_mark', 'attendance_percentage', 'study_hours_per_week', 'assignment_completion_pct', 'previous_sgpa', 'previous_cgpa', 'backlog_count', 'TARGET_END_MARKS']),
+        ("model2_pass_fail_dataset.csv", ['student_id', 'course_code', 'branch', 'semester', 'course_credits', 'CA_mark', 'MID_mark', 'attendance_percentage', 'study_hours_per_week', 'assignment_completion_pct', 'previous_sgpa', 'previous_cgpa', 'backlog_count', 'TARGET_PASS_FAIL']),
+        ("risk_features_dataset.csv", ['student_id', 'semester', 'branch', 'attendance_percentage', 'study_hours_per_week', 'assignment_completion_percentage', 'previous_sgpa', 'previous_cgpa', 'backlog_count', 'current_failed_courses', 'low_performance_course_count', 'performance_trend', 'INDEPENDENT_RISK_LABEL'])
+    ]
 
-            ca_mark, mid_mark, end_mark, practical_mark = None, None, None, None
-            total_obtained = 0
-            total_max = 0
+    # Create CSV files with headers
+    for fname, cols in files_to_init:
+        fpath = os.path.join(OUTPUT_DIR, fname)
+        pd.DataFrame(columns=cols).to_csv(fpath, index=False)
 
-            if a_type in ['CA_MID_END', 'CA_END']:
-                ca_mark = np.clip((base_score * 0.5) + np.random.normal(0, 3), 5, 50)
-                if np.random.rand() >= 0.015:
+    buffers = {fname: [] for fname, _ in files_to_init}
+
+    def flush_buffers():
+        for fname, _ in files_to_init:
+            if buffers[fname]:
+                fpath = os.path.join(OUTPUT_DIR, fname)
+                pd.DataFrame(buffers[fname]).to_csv(fpath, mode='a', header=False, index=False)
+                buffers[fname].clear()
+        gc.collect()
+
+    # Main processing loop
+    for idx, student in df_students.iterrows():
+        if idx % 2000 == 0 and idx > 0:
+            print(f"    Processed {idx}/{TOTAL_STUDENTS} students... (Flushing buffer to disk)")
+            flush_buffers()
+
+        s_id = student['student_id']
+        r_num = student['registration_number']
+        b_year = student['batch_year']
+        b_code = student['branch_code']
+        l_ability = student['_latent_ability']
+        l_habit = student['_study_habit']
+        l_att = student['_attendance_incl']
+
+        cum_credits = 0
+        cum_grade_points = 0.0
+        active_backlogs = []
+        prev_sgpas = []
+
+        start_sem = 3 if student['entry_type'] == 'LATERAL_ENTRY' else 1
+
+        for sem in range(start_sem, 9):
+            acad_year = b_year + SEM_YEAR_OFFSETS[sem]
+
+            att_pct = np.clip(75 + l_att * 10 + np.random.normal(0, 7), 40, 100)
+            study_hrs = np.clip(18 + l_habit * 6 + np.random.normal(0, 4), 2, 40)
+            assign_completion = np.clip(70 + l_habit * 12 + att_pct * 0.2 + np.random.normal(0, 8), 30, 100)
+            class_part = np.clip(50 + l_ability * 15 + att_pct * 0.3 + np.random.normal(0, 10), 0, 100)
+
+            sem_courses = course_lookup.get_group((b_code, sem))
+
+            sem_credits = 0
+            sem_weighted_gp = 0.0
+            sem_failed_courses = 0
+            sem_low_perf_courses = 0
+
+            for _, c_row in sem_courses.iterrows():
+                c_code = c_row['course_code']
+                c_name = c_row['course_name']
+                c_type = c_row['course_type']
+                credits = c_row['credits']
+                a_type = c_row['assessment_type']
+
+                base_score = np.clip(55 + (l_ability * 12) + (att_pct * 0.2) + (study_hrs * 0.5) + np.random.normal(0, 8), 10, 99)
+
+                ca_mark, mid_mark, end_mark, practical_mark = None, None, None, None
+                total_obtained = 0
+                total_max = 0
+
+                if a_type in ['CA_MID_END', 'CA_END']:
+                    ca_mark = np.clip((base_score * 0.5) + np.random.normal(0, 3), 5, 50)
+                    if np.random.rand() >= 0.015:
+                        buffers["assessment_marks.csv"].append({
+                            'student_id': s_id, 'registration_number': r_num, 'semester': sem,
+                            'academic_year': acad_year, 'course_code': c_code, 'course_name': c_name,
+                            'course_type': c_type, 'credits': credits, 'component': 'CA',
+                            'marks': round(ca_mark, 2), 'max_marks': 50, 'percentage': round((ca_mark/50)*100, 2)
+                        })
+                        total_obtained += ca_mark
+                    else: ca_mark = np.nan
+                    total_max += 50
+
+                if a_type == 'CA_MID_END':
+                    mid_mark = np.clip((base_score * 0.5) + np.random.normal(0, 4), 0, 50)
+                    if np.random.rand() >= 0.015:
+                        buffers["assessment_marks.csv"].append({
+                            'student_id': s_id, 'registration_number': r_num, 'semester': sem,
+                            'academic_year': acad_year, 'course_code': c_code, 'course_name': c_name,
+                            'course_type': c_type, 'credits': credits, 'component': 'MID',
+                            'marks': round(mid_mark, 2), 'max_marks': 50, 'percentage': round((mid_mark/50)*100, 2)
+                        })
+                        total_obtained += mid_mark
+                    else: mid_mark = np.nan
+                    total_max += 50
+
+                if a_type in ['CA_MID_END', 'CA_END']:
+                    end_mark = np.clip(base_score + np.random.normal(0, 6), 0, 100)
+                    if np.random.rand() >= 0.01:
+                        buffers["assessment_marks.csv"].append({
+                            'student_id': s_id, 'registration_number': r_num, 'semester': sem,
+                            'academic_year': acad_year, 'course_code': c_code, 'course_name': c_name,
+                            'course_type': c_type, 'credits': credits, 'component': 'END',
+                            'marks': round(end_mark, 2), 'max_marks': 100, 'percentage': round(end_mark, 2)
+                        })
+                        total_obtained += end_mark
+                    else: end_mark = np.nan
+                    total_max += 100
+
+                elif a_type in ['PRACTICAL', 'PROJECT']:
+                    practical_mark = np.clip(base_score + 5 + np.random.normal(0, 5), 10, 100)
                     buffers["assessment_marks.csv"].append({
                         'student_id': s_id, 'registration_number': r_num, 'semester': sem,
                         'academic_year': acad_year, 'course_code': c_code, 'course_name': c_name,
-                        'course_type': c_type, 'credits': credits, 'component': 'CA',
-                        'marks': round(ca_mark, 2), 'max_marks': 50, 'percentage': round((ca_mark/50)*100, 2)
+                        'course_type': c_type, 'credits': credits, 'component': a_type,
+                        'marks': round(practical_mark, 2), 'max_marks': 100, 'percentage': round(practical_mark, 2)
                     })
-                    total_obtained += ca_mark
-                else: ca_mark = np.nan
-                total_max += 50
+                    total_obtained = practical_mark
+                    total_max = 100
 
-            if a_type == 'CA_MID_END':
-                mid_mark = np.clip((base_score * 0.5) + np.random.normal(0, 4), 0, 50)
-                if np.random.rand() >= 0.015:
-                    buffers["assessment_marks.csv"].append({
-                        'student_id': s_id, 'registration_number': r_num, 'semester': sem,
-                        'academic_year': acad_year, 'course_code': c_code, 'course_name': c_name,
-                        'course_type': c_type, 'credits': credits, 'component': 'MID',
-                        'marks': round(mid_mark, 2), 'max_marks': 50, 'percentage': round((mid_mark/50)*100, 2)
-                    })
-                    total_obtained += mid_mark
-                else: mid_mark = np.nan
-                total_max += 50
+                tot_obs_clean = sum([m for m in [ca_mark, mid_mark, end_mark, practical_mark] if pd.notna(m)])
+                course_pct = (tot_obs_clean / total_max) * 100 if total_max > 0 else 0
+                grade, gp, status = calculate_grade(course_pct, c_type)
 
-            if a_type in ['CA_MID_END', 'CA_END']:
-                end_mark = np.clip(base_score + np.random.normal(0, 6), 0, 100)
-                if np.random.rand() >= 0.01:
-                    buffers["assessment_marks.csv"].append({
-                        'student_id': s_id, 'registration_number': r_num, 'semester': sem,
-                        'academic_year': acad_year, 'course_code': c_code, 'course_name': c_name,
-                        'course_type': c_type, 'credits': credits, 'component': 'END',
-                        'marks': round(end_mark, 2), 'max_marks': 100, 'percentage': round(end_mark, 2)
-                    })
-                    total_obtained += end_mark
-                else: end_mark = np.nan
-                total_max += 100
+                if status == 'FAIL':
+                    sem_failed_courses += 1
+                    active_backlogs.append(c_code)
+                if course_pct < 55:
+                    sem_low_perf_courses += 1
 
-            elif a_type in ['PRACTICAL', 'PROJECT']:
-                practical_mark = np.clip(base_score + 5 + np.random.normal(0, 5), 10, 100)
-                buffers["assessment_marks.csv"].append({
+                buffers["semester_results.csv"].append({
                     'student_id': s_id, 'registration_number': r_num, 'semester': sem,
                     'academic_year': acad_year, 'course_code': c_code, 'course_name': c_name,
-                    'course_type': c_type, 'credits': credits, 'component': a_type,
-                    'marks': round(practical_mark, 2), 'max_marks': 100, 'percentage': round(practical_mark, 2)
+                    'credits': credits, 'CA': round(ca_mark, 2) if pd.notna(ca_mark) else np.nan,
+                    'MID': round(mid_mark, 2) if pd.notna(mid_mark) else np.nan,
+                    'END': round(end_mark, 2) if pd.notna(end_mark) else np.nan,
+                    'PRACTICAL': round(practical_mark, 2) if pd.notna(practical_mark) else np.nan,
+                    'TOTAL_MARKS': round(tot_obs_clean, 2), 'PERCENTAGE': round(course_pct, 2),
+                    'GRADE': grade, 'GRADE_POINT': gp, 'RESULT_STATUS': status, 'ATTEMPT_TYPE': 'REGULAR'
                 })
-                total_obtained = practical_mark
-                total_max = 100
 
-            tot_obs_clean = sum([m for m in [ca_mark, mid_mark, end_mark, practical_mark] if pd.notna(m)])
-            course_pct = (tot_obs_clean / total_max) * 100 if total_max > 0 else 0
-            grade, gp, status = calculate_grade(course_pct, c_type)
+                if c_type != 'NON_CREDIT':
+                    sem_credits += credits
+                    sem_weighted_gp += (credits * gp)
 
-            if status == 'FAIL':
-                sem_failed_courses += 1
-                active_backlogs.append(c_code)
-            if course_pct < 55:
-                sem_low_perf_courses += 1
+                prev_sgpa_val = prev_sgpas[-1] if len(prev_sgpas) > 0 else np.nan
+                prev_cgpa_val = (cum_grade_points / cum_credits) if cum_credits > 0 else np.nan
 
-            buffers["semester_results.csv"].append({
+                if a_type in ['CA_MID_END', 'CA_END'] and pd.notna(end_mark):
+                    buffers["model1_regression_dataset.csv"].append({
+                        'student_id': s_id, 'course_code': c_code, 'branch': b_code, 'semester': sem,
+                        'course_credits': credits, 'course_type': c_type,
+                        'CA_mark': round(ca_mark, 2) if pd.notna(ca_mark) else np.nan,
+                        'MID_mark': round(mid_mark, 2) if pd.notna(mid_mark) else np.nan,
+                        'attendance_percentage': round(att_pct, 2),
+                        'study_hours_per_week': round(study_hrs, 2),
+                        'assignment_completion_pct': round(assign_completion, 2),
+                        'previous_sgpa': round(prev_sgpa_val, 2) if pd.notna(prev_sgpa_val) else np.nan,
+                        'previous_cgpa': round(prev_cgpa_val, 2) if pd.notna(prev_cgpa_val) else np.nan,
+                        'backlog_count': len(active_backlogs),
+                        'TARGET_END_MARKS': round(end_mark, 2)
+                    })
+
+                # Model 2 records every credit-bearing course result, including LAB/PROJECT
+                # courses without an end-term exam; Model 1 only records courses with END marks.
+                if c_type != 'NON_CREDIT':
+                    buffers["model2_pass_fail_dataset.csv"].append({
+                        'student_id': s_id, 'course_code': c_code, 'branch': b_code, 'semester': sem,
+                        'course_credits': credits,
+                        'CA_mark': round(ca_mark, 2) if pd.notna(ca_mark) else np.nan,
+                        'MID_mark': round(mid_mark, 2) if pd.notna(mid_mark) else np.nan,
+                        'attendance_percentage': round(att_pct, 2),
+                        'study_hours_per_week': round(study_hrs, 2),
+                        'assignment_completion_pct': round(assign_completion, 2),
+                        'previous_sgpa': round(prev_sgpa_val, 2) if pd.notna(prev_sgpa_val) else np.nan,
+                        'previous_cgpa': round(prev_cgpa_val, 2) if pd.notna(prev_cgpa_val) else np.nan,
+                        'backlog_count': len(active_backlogs),
+                        'TARGET_PASS_FAIL': 1 if status == 'PASS' else 0
+                    })
+
+            current_sgpa = sem_weighted_gp / sem_credits if sem_credits > 0 else 0.0
+            cum_credits += sem_credits
+            cum_grade_points += sem_weighted_gp
+            current_cgpa = cum_grade_points / cum_credits if cum_credits > 0 else 0.0
+
+            if len(prev_sgpas) == 0: trend = 'STABLE'
+            else:
+                diff = current_sgpa - prev_sgpas[-1]
+                trend = 'IMPROVING' if diff > 0.3 else ('DECLINING' if diff < -0.3 else 'STABLE')
+
+            prev_sgpas.append(current_sgpa)
+
+            buffers["student_semester_features.csv"].append({
                 'student_id': s_id, 'registration_number': r_num, 'semester': sem,
-                'academic_year': acad_year, 'course_code': c_code, 'course_name': c_name,
-                'credits': credits, 'CA': round(ca_mark, 2) if pd.notna(ca_mark) else np.nan,
-                'MID': round(mid_mark, 2) if pd.notna(mid_mark) else np.nan,
-                'END': round(end_mark, 2) if pd.notna(end_mark) else np.nan,
-                'PRACTICAL': round(practical_mark, 2) if pd.notna(practical_mark) else np.nan,
-                'TOTAL_MARKS': round(tot_obs_clean, 2), 'PERCENTAGE': round(course_pct, 2),
-                'GRADE': grade, 'GRADE_POINT': gp, 'RESULT_STATUS': status, 'ATTEMPT_TYPE': 'REGULAR'
+                'academic_year': acad_year, 'attendance_percentage': round(att_pct, 2),
+                'study_hours_per_week': round(study_hrs, 2),
+                'assignments_completed_percentage': round(assign_completion, 2),
+                'class_participation': round(class_part, 2),
+                'sgpa': round(current_sgpa, 2), 'cgpa': round(current_cgpa, 2),
+                'previous_sgpa': round(prev_sgpa_val, 2) if pd.notna(prev_sgpa_val) else np.nan,
+                'previous_cgpa': round(prev_cgpa_val, 2) if pd.notna(prev_cgpa_val) else np.nan,
+                'backlog_count': len(active_backlogs),
+                'current_failed_courses': sem_failed_courses,
+                'low_performance_course_count': sem_low_perf_courses,
+                'performance_trend': trend
             })
 
-            if c_type != 'NON_CREDIT':
-                sem_credits += credits
-                sem_weighted_gp += (credits * gp)
+            risk_latent_score = (100 - att_pct)*0.3 + (10 - current_sgpa)*8 + len(active_backlogs)*5 + np.random.normal(0, 5)
+            risk_label = 'HIGH' if risk_latent_score > 42 else ('MEDIUM' if risk_latent_score > 25 else 'LOW')
 
-            prev_sgpa_val = prev_sgpas[-1] if len(prev_sgpas) > 0 else np.nan
-            prev_cgpa_val = (cum_grade_points / cum_credits) if cum_credits > 0 else np.nan
+            buffers["risk_features_dataset.csv"].append({
+                'student_id': s_id, 'semester': sem, 'branch': b_code,
+                'attendance_percentage': round(att_pct, 2),
+                'study_hours_per_week': round(study_hrs, 2),
+                'assignment_completion_percentage': round(assign_completion, 2),
+                'previous_sgpa': round(prev_sgpa_val, 2) if pd.notna(prev_sgpa_val) else np.nan,
+                'previous_cgpa': round(prev_cgpa_val, 2) if pd.notna(prev_cgpa_val) else np.nan,
+                'backlog_count': len(active_backlogs),
+                'current_failed_courses': sem_failed_courses,
+                'low_performance_course_count': sem_low_perf_courses,
+                'performance_trend': trend,
+                'INDEPENDENT_RISK_LABEL': risk_label
+            })
 
-            if a_type in ['CA_MID_END', 'CA_END'] and pd.notna(end_mark):
-                buffers["model1_regression_dataset.csv"].append({
-                    'student_id': s_id, 'course_code': c_code, 'branch': b_code, 'semester': sem,
-                    'course_credits': credits, 'course_type': c_type,
-                    'CA_mark': round(ca_mark, 2) if pd.notna(ca_mark) else np.nan,
-                    'MID_mark': round(mid_mark, 2) if pd.notna(mid_mark) else np.nan,
-                    'attendance_percentage': round(att_pct, 2),
-                    'study_hours_per_week': round(study_hrs, 2),
-                    'assignment_completion_pct': round(assign_completion, 2),
-                    'previous_sgpa': round(prev_sgpa_val, 2) if pd.notna(prev_sgpa_val) else np.nan,
-                    'previous_cgpa': round(prev_cgpa_val, 2) if pd.notna(prev_cgpa_val) else np.nan,
-                    'backlog_count': len(active_backlogs),
-                    'TARGET_END_MARKS': round(end_mark, 2)
-                })
+    flush_buffers()
+    print("[4/6] Exporting CSV Files to Disk completed.")
+    print("[5/6] Performing Data Integrity Validation...")
+    print("      Validation checks passed!")
+    print("[6/6] Simulation finished successfully! Files saved to:", os.path.abspath(OUTPUT_DIR))
 
-            if c_type != 'NON_CREDIT':
-                buffers["model2_pass_fail_dataset.csv"].append({
-                    'student_id': s_id, 'course_code': c_code, 'branch': b_code, 'semester': sem,
-                    'course_credits': credits,
-                    'CA_mark': round(ca_mark, 2) if pd.notna(ca_mark) else np.nan,
-                    'MID_mark': round(mid_mark, 2) if pd.notna(mid_mark) else np.nan,
-                    'attendance_percentage': round(att_pct, 2),
-                    'study_hours_per_week': round(study_hrs, 2),
-                    'assignment_completion_pct': round(assign_completion, 2),
-                    'previous_sgpa': round(prev_sgpa_val, 2) if pd.notna(prev_sgpa_val) else np.nan,
-                    'previous_cgpa': round(prev_cgpa_val, 2) if pd.notna(prev_cgpa_val) else np.nan,
-                    'backlog_count': len(active_backlogs),
-                    'TARGET_PASS_FAIL': 1 if status == 'PASS' else 0
-                })
+    import shutil
 
-        current_sgpa = sem_weighted_gp / sem_credits if sem_credits > 0 else 0.0
-        cum_credits += sem_credits
-        cum_grade_points += sem_weighted_gp
-        current_cgpa = cum_grade_points / cum_credits if cum_credits > 0 else 0.0
+    # Zip the entire folder
+    shutil.make_archive(str(REPO_ROOT / "university_data"), "zip", str(DATA_DIR))
+    print("Folder successfully zipped as 'university_data.zip'")
 
-        if len(prev_sgpas) == 0: trend = 'STABLE'
-        else:
-            diff = current_sgpa - prev_sgpas[-1]
-            trend = 'IMPROVING' if diff > 0.3 else ('DECLINING' if diff < -0.3 else 'STABLE')
+    try:
+        from google.colab import files
+    except ImportError:
+        files = None
 
-        prev_sgpas.append(current_sgpa)
-
-        buffers["student_semester_features.csv"].append({
-            'student_id': s_id, 'registration_number': r_num, 'semester': sem,
-            'academic_year': acad_year, 'attendance_percentage': round(att_pct, 2),
-            'study_hours_per_week': round(study_hrs, 2),
-            'assignments_completed_percentage': round(assign_completion, 2),
-            'class_participation': round(class_part, 2),
-            'sgpa': round(current_sgpa, 2), 'cgpa': round(current_cgpa, 2),
-            'previous_sgpa': round(prev_sgpa_val, 2) if pd.notna(prev_sgpa_val) else np.nan,
-            'previous_cgpa': round(prev_cgpa_val, 2) if pd.notna(prev_cgpa_val) else np.nan,
-            'backlog_count': len(active_backlogs),
-            'current_failed_courses': sem_failed_courses,
-            'low_performance_course_count': sem_low_perf_courses,
-            'performance_trend': trend
-        })
-
-        risk_latent_score = (100 - att_pct)*0.3 + (10 - current_sgpa)*8 + len(active_backlogs)*5 + np.random.normal(0, 5)
-        risk_label = 'HIGH' if risk_latent_score > 42 else ('MEDIUM' if risk_latent_score > 25 else 'LOW')
-
-        buffers["risk_features_dataset.csv"].append({
-            'student_id': s_id, 'semester': sem, 'branch': b_code,
-            'attendance_percentage': round(att_pct, 2),
-            'study_hours_per_week': round(study_hrs, 2),
-            'assignment_completion_percentage': round(assign_completion, 2),
-            'previous_sgpa': round(prev_sgpa_val, 2) if pd.notna(prev_sgpa_val) else np.nan,
-            'previous_cgpa': round(prev_cgpa_val, 2) if pd.notna(prev_cgpa_val) else np.nan,
-            'backlog_count': len(active_backlogs),
-            'current_failed_courses': sem_failed_courses,
-            'low_performance_course_count': sem_low_perf_courses,
-            'performance_trend': trend,
-            'INDEPENDENT_RISK_LABEL': risk_label
-        })
-
-flush_buffers()
-print("[4/6] Exporting CSV Files to Disk completed.")
-print("[5/6] Performing Data Integrity Validation...")
-print("      Validation checks passed!")
-print("[6/6] Simulation finished successfully! Files saved to:", os.path.abspath(OUTPUT_DIR))
-
-import shutil
-
-# Zip the entire folder
-shutil.make_archive('university_data', 'zip', '/content/university_data')
-print("Folder successfully zipped as 'university_data.zip'")
-
-from google.colab import files
-
-# Triggers direct browser download
-files.download('university_data.zip')
+    if files is not None:
+        files.download(str(REPO_ROOT / 'university_data.zip'))
 
 # ============================================
 # MODEL 1 — END-TERM MARK PREDICTION
@@ -360,7 +635,6 @@ files.download('university_data.zip')
 import pandas as pd
 import numpy as np
 
-from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import OneHotEncoder
 from sklearn.compose import ColumnTransformer
 from sklearn.pipeline import Pipeline
@@ -386,7 +660,7 @@ print("NumPy version:", np.__version__)
 # CELL 2: LOAD DATASET
 # ============================================
 
-FILE_PATH = "/content/university_data/model1_regression_dataset.csv"
+FILE_PATH = DATA_DIR / "model1_regression_dataset.csv"
 
 df = pd.read_csv(FILE_PATH)
 
@@ -633,12 +907,9 @@ print("Categorical features will be One-Hot encoded.")
 # CELL 6: TRAIN / TEST SPLIT
 # ============================================
 
-X_train, X_test, y_train, y_test = train_test_split(
-    X,
-    y,
-    test_size=0.20,
-    random_state=42
-)
+train_idx, test_idx = make_group_split(df, test_size=0.20, seed=42)
+X_train, X_test = X.iloc[train_idx], X.iloc[test_idx]
+y_train, y_test = y.iloc[train_idx], y.iloc[test_idx]
 
 print("========== TRAIN / TEST SPLIT ==========")
 
@@ -1123,12 +1394,11 @@ plt.show()
 import os
 import json
 import joblib
+import sklearn
 
 # --------------------------------------------
 # Create model directory
 # --------------------------------------------
-
-MODEL_DIR = "/content/university_data/models"
 
 os.makedirs(MODEL_DIR, exist_ok=True)
 
@@ -1136,6 +1406,7 @@ os.makedirs(MODEL_DIR, exist_ok=True)
 # Save complete pipeline
 # --------------------------------------------
 
+assert sklearn.__version__ == "1.6.1"
 MODEL_PATH = os.path.join(
     MODEL_DIR,
     "model1_endterm_histgradientboosting.pkl"
@@ -1164,7 +1435,13 @@ metrics = {
         "RMSE": float(hgb_rmse),
         "R2": float(hgb_r2)
     },
-    "random_state": 42
+    "random_state": 42,
+    "n_train_students": int(df.iloc[train_idx]["student_id"].nunique()),
+    "n_test_students": int(df.iloc[test_idx]["student_id"].nunique()),
+    "split": "GroupShuffleSplit by student_id, seed 42",
+    "baseline_mae_train_mean": float(
+        mean_absolute_error(y_test, np.full(len(y_test), y_train.mean()))
+    )
 }
 
 METRICS_PATH = os.path.join(
@@ -1225,7 +1502,7 @@ import os
 # --------------------------------------------
 
 loaded_model = joblib.load(
-    "/content/university_data/models/model1_endterm_histgradientboosting.pkl"
+    MODEL_DIR / "model1_endterm_histgradientboosting.pkl"
 )
 
 print("Saved model loaded successfully.")
@@ -1293,7 +1570,6 @@ else:
 import pandas as pd
 import numpy as np
 
-from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import OneHotEncoder
 from sklearn.impute import SimpleImputer
 from sklearn.compose import ColumnTransformer
@@ -1305,6 +1581,8 @@ from sklearn.ensemble import HistGradientBoostingClassifier
 
 from sklearn.metrics import (
     accuracy_score,
+    average_precision_score,
+    brier_score_loss,
     precision_score,
     recall_score,
     f1_score,
@@ -1322,7 +1600,7 @@ print("Model 2 libraries imported successfully.")
 # CELL 2: LOAD DATASET
 # ============================================
 
-FILE_PATH = "/content/university_data/model2_pass_fail_dataset.csv"
+FILE_PATH = DATA_DIR / "model2_pass_fail_dataset.csv"
 
 df2 = pd.read_csv(FILE_PATH)
 
@@ -1728,13 +2006,11 @@ print("Branch → One-Hot Encoding")
 # CELL 7: STRATIFIED TRAIN / TEST SPLIT
 # ============================================
 
-X2_train, X2_test, y2_train, y2_test = train_test_split(
-    X2,
-    y2,
-    test_size=0.20,
-    random_state=42,
-    stratify=y2
+train_idx2, test_idx2 = make_group_split(
+    df2, label=y2, test_size=0.20, seed=42
 )
+X2_train, X2_test = X2.iloc[train_idx2], X2.iloc[test_idx2]
+y2_train, y2_test = y2.iloc[train_idx2], y2.iloc[test_idx2]
 
 print("========== TRAIN / TEST SPLIT ==========")
 
@@ -2267,15 +2543,17 @@ print("Reason: Highest FAIL Recall and highest ROC-AUC.")
 import os
 import json
 import joblib
+import sklearn
 
 # Create models directory
-models_dir = "/content/university_data/models"
+models_dir = MODEL_DIR
 os.makedirs(models_dir, exist_ok=True)
 
 # --------------------------------------------
 # Save selected model
 # --------------------------------------------
 
+assert sklearn.__version__ == "1.6.1"
 model2_path = os.path.join(
     models_dir,
     "model2_pass_fail_histgradientboosting.pkl"
@@ -2305,7 +2583,65 @@ model2_metrics = {
     "selected_reason": (
         "Highest FAIL Recall and highest ROC-AUC "
         "among the three evaluated models."
+    ),
+    "split": "StratifiedGroupKFold by student_id, 5 folds, seed 42 (first fold)",
+    "n_train_rows": int(len(X2_train)),
+    "n_test_rows": int(len(X2_test)),
+    "n_test_students": int(df2.iloc[test_idx2]["student_id"].nunique()),
+    "fail_rows_test": int((y2_test == 0).sum()),
+    "base_rate_fail": float((y2_test == 0).mean()),
+    "always_pass_accuracy": float((y2_test == 1).mean()),
+    "pr_auc": float(average_precision_score(
+        (y2_test == 0).astype(int), y2_prob_hgb_fail
+    )),
+    "precision_lift": float(
+        hgb_precision / (y2_test == 0).mean()
+    ),
+    "false_alerts_per_true_fail": float(
+        (1 - hgb_precision) / hgb_precision if hgb_precision else 0
+    ),
+    "threshold_sweep": [],
+    "calibration": {}
+}
+
+for threshold in np.arange(0.05, 1.0, 0.05):
+    flagged = y2_prob_hgb_fail >= threshold
+    threshold_precision = precision_score(
+        (y2_test == 0).astype(int), flagged, zero_division=0
     )
+    model2_metrics["threshold_sweep"].append({
+        "threshold": float(round(threshold, 2)),
+        "precision": float(threshold_precision),
+        "recall": float(recall_score(
+            (y2_test == 0).astype(int), flagged, zero_division=0
+        )),
+        "f1": float(f1_score(
+            (y2_test == 0).astype(int), flagged, zero_division=0
+        )),
+        "flagged_per_true_fail": float(
+            flagged.sum() / max(int((y2_test == 0).sum()), 1)
+        ),
+    })
+
+calibration_data = pd.DataFrame({
+    "predicted": y2_prob_hgb_fail,
+    "actual": (y2_test == 0).astype(int).to_numpy(),
+})
+calibration_data["bin"] = pd.qcut(
+    calibration_data["predicted"], q=10, duplicates="drop"
+)
+calibration = calibration_data.groupby("bin", observed=True).agg(
+    mean_predicted=("predicted", "mean"),
+    fraction_positive=("actual", "mean"),
+)
+model2_metrics["calibration"] = {
+    "method": "quantile",
+    "n_bins": 10,
+    "mean_predicted": calibration["mean_predicted"].tolist(),
+    "fraction_positive": calibration["fraction_positive"].tolist(),
+    "brier_score": float(brier_score_loss(
+        (y2_test == 0).astype(int), y2_prob_hgb_fail
+    )),
 }
 
 metrics_path = os.path.join(
@@ -2339,7 +2675,7 @@ print("Metrics :", os.path.exists(metrics_path))
 
 print("Reloading saved Model 2...")
 
-model2_path = "/content/university_data/models/model2_pass_fail_histgradientboosting.pkl"
+model2_path = MODEL_DIR / "model2_pass_fail_histgradientboosting.pkl"
 
 # Reload model
 reloaded_model2 = joblib.load(model2_path)
@@ -2380,7 +2716,7 @@ else:
 import pandas as pd
 import numpy as np
 
-risk_path = "/content/university_data/risk_features_dataset.csv"
+risk_path = DATA_DIR / "risk_features_dataset.csv"
 
 risk_df = pd.read_csv(risk_path)
 
@@ -2469,7 +2805,7 @@ import pandas as pd
 import numpy as np
 import os
 
-risk_path = "/content/university_data/risk_features_dataset.csv"
+risk_path = DATA_DIR / "risk_features_dataset.csv"
 
 # Read CSV
 risk_df = pd.read_csv(
@@ -2486,7 +2822,7 @@ display(risk_df.head(3))
 # DEBUG — INSPECT RAW RISK CSV
 # ============================================
 
-risk_path = "/content/university_data/risk_features_dataset.csv"
+risk_path = DATA_DIR / "risk_features_dataset.csv"
 
 with open(risk_path, "r", encoding="utf-8") as f:
     for i in range(10):
@@ -2506,7 +2842,7 @@ with open(risk_path, "r", encoding="utf-8") as f:
 import pandas as pd
 import numpy as np
 
-risk_path = "/content/university_data/risk_features_dataset.csv"
+risk_path = DATA_DIR / "risk_features_dataset.csv"
 
 # Correct column names from the original dataset structure
 risk_columns = [
@@ -3630,7 +3966,6 @@ import os
 import json
 import pandas as pd
 
-MODEL_DIR = "/content/university_data/models"
 os.makedirs(MODEL_DIR, exist_ok=True)
 
 # --------------------------------------------
@@ -3845,4 +4180,3 @@ print("\n✅ MODEL 3 CONFIGURATION VERIFIED")
 print("✅ MODEL 3 METRICS VERIFIED")
 print("✅ ALL WEIGHTS SUM TO 1.0")
 print("✅ THRESHOLDS VERIFIED")
-

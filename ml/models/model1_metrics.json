@@ -3,8 +3,8 @@
     "problem_type": "Regression",
     "selected_algorithm": "HistGradientBoostingRegressor",
     "dataset": "model1_regression_dataset.csv",
-    "train_samples": 215746,
-    "test_samples": 53937,
+    "train_samples": 215712,
+    "test_samples": 53971,
     "features": [
         "CA_mark",
         "MID_mark",
@@ -21,9 +21,13 @@
     ],
     "target": "TARGET_END_MARKS",
     "metrics": {
-        "MAE": 5.631208308353403,
-        "RMSE": 7.071165463379671,
-        "R2": 0.7635994683851461
+        "MAE": 5.65486118852561,
+        "RMSE": 7.089512420739615,
+        "R2": 0.757390134321228
     },
-    "random_state": 42
+    "random_state": 42,
+    "n_train_students": 8000,
+    "n_test_students": 2000,
+    "split": "GroupShuffleSplit by student_id, seed 42",
+    "baseline_mae_train_mean": 11.871468615094395
 }

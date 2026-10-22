@@ -62,12 +62,58 @@ ml/
 
 ## Dataset
 
-Training uses the **UCI Student Performance Dataset** (Mathematics course):
+The current Model 1 and Model 2 artifacts are trained on the simulated CBCS datasets in `university_data/`. Some legacy notebooks and documentation also reference the UCI Student Performance Dataset (`data/raw/student-mat.csv`); that dataset is not the input to the current CBCS training script.
 
-- Local path: `data/raw/student-mat.csv`
-- Notebooks were developed in Google Colab with uploaded zip files; for local runs use the path above.
+## Dataset sizes
 
-See [`data/README.md`](data/README.md) for column details.
+The current training datasets are generated from the simulated CBCS course results in `university_data/`:
+
+| Dataset | Rows |
+|---------|-----:|
+| `model1_regression_dataset.csv` | 269,683 |
+| `model2_pass_fail_dataset.csv` | 347,744 |
+
+Model 1 records CA_MID_END and CA_END course results when an end-term mark is available (including NON_CREDIT CA_END courses). Model 2 records every credit-bearing course result, including LAB and PROJECT courses assessed without an end-term exam. Those additional credit-bearing course results make Model 2 larger; it is not caused by repeated attempts.
+
+## How to retrain
+
+From the repository root, run:
+
+```bash
+cd backend
+RUN_MODEL_RETRAIN=1 uv run python ../ml/models/student_results_dataset_and_models_training.py
+```
+
+The retraining process uses `DATA_DIR` (default `university_data`) and `MODEL_DIR` (default `ml/models`), resolved relative to the repository root unless set to absolute paths. `RUN_SIMULATION` defaults to `false`, so the committed CSV datasets are not regenerated or overwritten. Allow approximately **5–10 minutes**, depending on available CPU and memory.
+
+The command requires scikit-learn 1.6.1 and writes:
+
+- `ml/models/model1_endterm_histgradientboosting.pkl`
+- `ml/models/model2_pass_fail_histgradientboosting.pkl`
+- `ml/models/model1_metrics.json`
+- `ml/models/model2_metrics.json`
+- `ml/models/model1_feature_importance.csv`
+
+Both models use student-level splits so a student's course rows cannot occur in both training and test sets. Model 1 uses `GroupShuffleSplit`; Model 2 uses the first fold of a shuffled, seeded five-fold `StratifiedGroupKFold`.
+
+## Frozen metrics
+
+The following table compares the previous row-level evaluation with the new student-level evaluation. The Model 2 before/after rows use each model's respective test set; accuracy is accompanied by the always-PASS baseline to make the class imbalance visible.
+
+| Model / metric | Before (row-level) | After (student-level) |
+|----------------|-------------------:|----------------------:|
+| Model 1 test rows | 53,937 | 53,971 |
+| Model 1 MAE | 5.6312 | 5.6549 |
+| Model 1 RMSE | 7.0712 | 7.0895 |
+| Model 1 R² | 0.7636 | 0.7574 |
+| Model 2 test rows | 69,549 | 69,585 |
+| Model 2 accuracy | 0.9533 | 0.9595 |
+| Model 2 always-PASS accuracy | 0.9908 | 0.9919 |
+| Model 2 FAIL precision | 0.1614 | 0.1606 |
+| Model 2 FAIL recall | 0.9673 | 0.9519 |
+| Model 2 FAIL F1 | 0.2767 | 0.2748 |
+| Model 2 ROC-AUC | 0.9906 | 0.9912 |
+| Model 2 PR-AUC | Not recorded | 0.5849 |
 
 ## Inference
 
