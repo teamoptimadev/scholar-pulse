@@ -46,6 +46,8 @@ jobs:
         run: uv sync --group dev
       - name: Apply migrations
         run: uv run alembic upgrade head
+      - name: Provision test data
+        run: uv run python scripts/seed.py --scale 100
       - name: Lint backend
         run: uv run ruff check .
       - name: Run backend tests
