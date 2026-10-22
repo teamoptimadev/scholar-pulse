@@ -15,7 +15,10 @@ from app.schemas.prediction import (
     StudentPredictionRequest,
 )
 from app.services.authorization_service import assert_student_access, get_accessible_student_ids
-from app.services.feature_preparation import build_features_from_student
+from app.services.feature_preparation import (
+    build_features_from_enrollment,
+    build_features_from_student,
+)
 from app.services.prediction_service import (
     predict_pass_fail_only,
     predict_performance_only,
@@ -103,33 +106,65 @@ def predict_for_student(
     current: CurrentUserDep,
     db: DbSession,
 ):
-    assert_student_access(db, current.user, uuid.UUID(body.student_id))
+    student_id = uuid.UUID(body.student_id)
+    assert_student_access(db, current.user, student_id)
 
+    from app.models.enrollment import Enrollment
+
+    if body.enrollment_id is not None:
+        try:
+            enrollment_id = uuid.UUID(body.enrollment_id)
+        except ValueError:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Enrollment not found",
+            ) from None
+
+        enrollment = (
+            db.query(Enrollment)
+            .filter(
+                Enrollment.id == enrollment_id,
+                Enrollment.student_id == student_id,
+                Enrollment.institution_id == current.institution_id,
+            )
+            .first()
+        )
+        if enrollment is None:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Enrollment not found",
+            )
+    else:
+        enrollment = (
+            db.query(Enrollment)
+            .filter(
+                Enrollment.student_id == student_id,
+                Enrollment.institution_id == current.institution_id,
+            )
+            .order_by(Enrollment.created_at.desc())
+            .first()
+        )
+
+    semester_id = enrollment.semester_id if enrollment else None
     try:
-        build_features_from_student(
-            db, uuid.UUID(body.student_id), current.institution_id
+        features = (
+            build_features_from_enrollment(
+                db, enrollment.id, current.institution_id
+            )
+            if enrollment is not None
+            else build_features_from_student(
+                db, student_id, current.institution_id
+            )
         )
     except ValueError as e:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(e))
 
-    from app.models.enrollment import Enrollment
-
-    enrollment = (
-        db.query(Enrollment)
-        .filter(
-            Enrollment.student_id == uuid.UUID(body.student_id),
-            Enrollment.institution_id == current.institution_id,
-        )
-        .order_by(Enrollment.created_at.desc())
-        .first()
-    )
-    semester_id = enrollment.semester_id if enrollment else None
-
     prediction = store_student_prediction(
         db,
-        uuid.UUID(body.student_id),
+        student_id,
         current.institution_id,
         semester_id,
+        features=features,
     )
     db.commit()
     db.refresh(prediction)

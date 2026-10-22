@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import uuid
+from typing import Any
 
 from sqlalchemy.orm import Session
 
@@ -17,9 +18,11 @@ def store_student_prediction(
     student_id: uuid.UUID,
     institution_id: uuid.UUID,
     semester_id: uuid.UUID | None = None,
+    features: dict[str, Any] | None = None,
 ) -> PredictionResult:
     """Build features from DB, run all models, and persist the prediction result."""
-    features = build_features_from_student(db, student_id, institution_id)
+    if features is None:
+        features = build_features_from_student(db, student_id, institution_id)
     result = predict_all(features, student_id=str(student_id))
 
     risk = result["risk"]

@@ -150,7 +150,7 @@ def build_goal_guidance(
             PredictionResult.student_id == student_id,
             PredictionResult.institution_id == institution_id,
         )
-        .order_by(PredictionResult.predicted_at.desc())
+        .order_by(PredictionResult.created_at.desc())
         .first()
     )
     predicted_perf = None
