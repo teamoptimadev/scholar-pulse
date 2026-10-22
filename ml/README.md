@@ -184,3 +184,83 @@ uv run pytest tests/ -v
 | [docs/data_pipeline.md](docs/data_pipeline.md) | Data loading and preprocessing |
 | [docs/model_evaluation.md](docs/model_evaluation.md) | Evaluation metrics |
 | [docs/inference.md](docs/inference.md) | Inference API |
+
+## Feature Importance, Ablation, and Threshold-Cost Analysis
+
+The analyses use the held-out student-level splits (Model 1: 53,971 rows / 2,000 students; Model 2: 69,585 rows / 1,995 students / 561 FAILs). Permutation importance uses all held-out rows, five repeats, and seed 42. Model 1 importance is the increase in MAE; Model 2 importance is the decrease in average precision for FAIL.
+
+### Top features by permutation importance
+
+| Rank | Model 1 feature | MAE increase |
+|---:|---|---:|
+| 1 | `CA_mark` | 5.304304 |
+| 2 | `MID_mark` | 1.262776 |
+| 3 | `previous_cgpa` | 0.444998 |
+| 4 | `study_hours_per_week` | 0.028512 |
+| 5 | `backlog_count` | 0.023841 |
+
+| Rank | Model 2 feature | FAIL average-precision decrease |
+|---:|---|---:|
+| 1 | `backlog_count` | 0.549465 |
+| 2 | `MID_mark` | 0.191971 |
+| 3 | `CA_mark` | 0.182226 |
+| 4 | `previous_cgpa` | 0.089642 |
+| 5 | `course_credits` | 0.062319 |
+
+All features and standard deviations are recorded in `models/model1_feature_importance.csv` and `models/model2_feature_importance.csv`.
+
+### Feature-group ablation
+
+Fresh clones of the full pipelines were fit on the training rows and evaluated on the same held-out test rows. Deltas are relative to Full.
+
+| Model 1 configuration | MAE (Δ) | RMSE (Δ) | R² (Δ) |
+|---|---:|---:|---:|
+| Full model | 5.654861 (0.000000) | 7.089512 (0.000000) | 0.757390 (0.000000) |
+| Drop `MID_mark` only | 5.942767 (+0.287906) | 7.458517 (+0.369004) | 0.731478 (-0.025913) |
+| Drop all Assessments | 8.345810 (+2.690949) | 10.456414 (+3.366901) | 0.472234 (-0.285156) |
+| Drop Engagement / Behavioral | 5.661289 (+0.006428) | 7.096271 (+0.006758) | 0.756927 (-0.000463) |
+| Drop Prior Academic History | 5.827282 (+0.172421) | 7.301853 (+0.212341) | 0.742639 (-0.014751) |
+
+| Model 2 configuration | FAIL Recall (Δ) | FAIL Precision (Δ) | PR-AUC (Δ) | ROC-AUC (Δ) |
+|---|---:|---:|---:|---:|
+| Full model | 0.951872 (0.000000) | 0.160602 (0.000000) | 0.584915 (0.000000) | 0.991248 (0.000000) |
+| Drop `MID_mark` only | 0.934046 (-0.017825) | 0.145193 (-0.015409) | 0.507328 (-0.077587) | 0.988774 (-0.002475) |
+| Drop all Assessments | 0.957219 (+0.005348) | 0.109257 (-0.051344) | 0.291416 (-0.293499) | 0.982110 (-0.009138) |
+| Drop Engagement / Behavioral | 0.960784 (+0.008913) | 0.161136 (+0.000535) | 0.605520 (+0.020605) | 0.991798 (+0.000550) |
+| Drop Prior Academic History | 0.698752 (-0.253119) | 0.030022 (-0.130579) | 0.354163 (-0.230752) | 0.876645 (-0.114603) |
+
+### Model 2 threshold-cost sweep
+
+Predictions are flagged when `p(FAIL) >= threshold`. FP/TP is the false-alerts-per-true-fail ratio; flagged percentage uses all 69,585 test enrollments.
+
+| Model | Threshold | TP | FP | FN | FAIL Recall | FAIL Precision | FP / TP | Flagged |
+|---|---:|---:|---:|---:|---:|---:|---:|---:|
+| Full | 0.10 | 557 | 4,740 | 4 | 0.9929 | 0.1052 | 8.510 | 7.612% |
+| Full | 0.20 | 553 | 4,076 | 8 | 0.9857 | 0.1195 | 7.371 | 6.652% |
+| Full | 0.30 | 547 | 3,590 | 14 | 0.9750 | 0.1322 | 6.563 | 5.945% |
+| Full | 0.40 | 542 | 3,169 | 19 | 0.9661 | 0.1461 | 5.847 | 5.333% |
+| Full | 0.50 | 534 | 2,791 | 27 | 0.9519 | 0.1606 | 5.227 | 4.778% |
+| Full | 0.60 | 526 | 2,441 | 35 | 0.9376 | 0.1773 | 4.641 | 4.264% |
+| Full | 0.70 | 517 | 2,030 | 44 | 0.9216 | 0.2030 | 3.926 | 3.660% |
+| Full | 0.80 | 492 | 1,497 | 69 | 0.8770 | 0.2474 | 3.043 | 2.858% |
+| CA-only | 0.10 | 556 | 5,148 | 5 | 0.9911 | 0.0975 | 9.259 | 8.197% |
+| CA-only | 0.20 | 552 | 4,439 | 9 | 0.9840 | 0.1106 | 8.042 | 7.173% |
+| CA-only | 0.30 | 548 | 3,942 | 13 | 0.9768 | 0.1220 | 7.193 | 6.453% |
+| CA-only | 0.40 | 540 | 3,488 | 21 | 0.9626 | 0.1341 | 6.459 | 5.789% |
+| CA-only | 0.50 | 524 | 3,085 | 37 | 0.9340 | 0.1452 | 5.887 | 5.186% |
+| CA-only | 0.60 | 513 | 2,663 | 48 | 0.9144 | 0.1615 | 5.191 | 4.564% |
+| CA-only | 0.70 | 497 | 2,164 | 64 | 0.8859 | 0.1868 | 4.354 | 3.824% |
+| CA-only | 0.80 | 470 | 1,578 | 91 | 0.8378 | 0.2295 | 3.357 | 2.943% |
+
+### Policy operating points
+
+High-recall screening selects the sweep threshold meeting at least 90% recall with the fewest false alerts. No sweep threshold meets the 2.0% cap, so capacity-constrained thresholds use the lowest observed score still within the 1,391-enrollment limit.
+
+| Model | Policy | Threshold | TP | FP | FN | FAIL Recall | FAIL Precision | Flagged |
+|---|---|---:|---:|---:|---:|---:|---:|---:|
+| Full | High-recall screening | 0.70 | 517 | 2,030 | 44 | 0.9216 | 0.2030 | 3.660% |
+| CA-only | High-recall screening | 0.60 | 513 | 2,663 | 48 | 0.9144 | 0.1615 | 4.564% |
+| Full | Capacity-constrained (≤2.0%) | 0.883089 | 442 | 949 | 119 | 0.7879 | 0.3178 | 1.999% |
+| CA-only | Capacity-constrained (≤2.0%) | 0.886314 | 409 | 982 | 152 | 0.7291 | 0.2940 | 1.999% |
+
+Complete tables and split/method details are in `models/ablation_and_threshold_analysis.json`.

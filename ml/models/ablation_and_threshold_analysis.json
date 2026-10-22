@@ -1,0 +1,691 @@
+{
+  "dataset_splits": {
+    "model1": {
+      "train_rows": 215712,
+      "test_rows": 53971,
+      "test_students": 2000,
+      "method": "GroupShuffleSplit(n_splits=1, test_size=0.20, random_state=42), grouped by student_id"
+    },
+    "model2": {
+      "train_rows": 278159,
+      "test_rows": 69585,
+      "test_students": 1995,
+      "test_fails": 561,
+      "method": "StratifiedGroupKFold(n_splits=5, shuffle=True, random_state=42), first fold, grouped by student_id"
+    }
+  },
+  "permutation_importance": {
+    "method": "sklearn.inspection.permutation_importance, n_repeats=5, random_state=42, n_jobs=-1; held-out test split",
+    "model1": {
+      "scoring": "neg_mean_absolute_error",
+      "rows": [
+        {
+          "Feature": "CA_mark",
+          "Importance": 5.304303894770604,
+          "Std": 0.023228035325681306
+        },
+        {
+          "Feature": "MID_mark",
+          "Importance": 1.262775815380413,
+          "Std": 0.014606868233877085
+        },
+        {
+          "Feature": "previous_cgpa",
+          "Importance": 0.4449980663222366,
+          "Std": 0.008518639614763467
+        },
+        {
+          "Feature": "study_hours_per_week",
+          "Importance": 0.028512424745331978,
+          "Std": 0.0013496640139617547
+        },
+        {
+          "Feature": "backlog_count",
+          "Importance": 0.023840858021082312,
+          "Std": 0.0006843116118258688
+        },
+        {
+          "Feature": "previous_sgpa",
+          "Importance": 0.017303288056710286,
+          "Std": 0.00035528795657692404
+        },
+        {
+          "Feature": "course_credits",
+          "Importance": 0.01226372977438892,
+          "Std": 0.000858354378823609
+        },
+        {
+          "Feature": "semester",
+          "Importance": 0.010878101947000651,
+          "Std": 0.0009422265605030177
+        },
+        {
+          "Feature": "attendance_percentage",
+          "Importance": 0.009704820845099781,
+          "Std": 0.0010453832786989307
+        },
+        {
+          "Feature": "assignment_completion_pct",
+          "Importance": 0.005044271707881798,
+          "Std": 0.00043157565971860664
+        },
+        {
+          "Feature": "course_type",
+          "Importance": 0.002052340223026583,
+          "Std": 0.0003374772624847186
+        },
+        {
+          "Feature": "branch",
+          "Importance": 0.0008517465822759362,
+          "Std": 0.00025386677635980375
+        }
+      ]
+    },
+    "model2": {
+      "scoring": "average precision for FAIL (TARGET_PASS_FAIL == 0)",
+      "rows": [
+        {
+          "Feature": "backlog_count",
+          "Importance": 0.549465381481695,
+          "Std": 0.0037445000157459614
+        },
+        {
+          "Feature": "MID_mark",
+          "Importance": 0.19197141090523565,
+          "Std": 0.010902909575041565
+        },
+        {
+          "Feature": "CA_mark",
+          "Importance": 0.18222609004455936,
+          "Std": 0.012610247922451674
+        },
+        {
+          "Feature": "previous_cgpa",
+          "Importance": 0.08964180415271292,
+          "Std": 0.004172185355139157
+        },
+        {
+          "Feature": "course_credits",
+          "Importance": 0.06231895145450857,
+          "Std": 0.006600102470739706
+        },
+        {
+          "Feature": "semester",
+          "Importance": 0.05676998537762366,
+          "Std": 0.002653135031140432
+        },
+        {
+          "Feature": "previous_sgpa",
+          "Importance": 0.04666045646201165,
+          "Std": 0.006798357918549794
+        },
+        {
+          "Feature": "study_hours_per_week",
+          "Importance": 0.0030613328027823796,
+          "Std": 0.0019911273608562274
+        },
+        {
+          "Feature": "branch",
+          "Importance": 0.0012481631541084947,
+          "Std": 0.0012423450137866447
+        },
+        {
+          "Feature": "attendance_percentage",
+          "Importance": 0.0006316576008537966,
+          "Std": 0.0004431670430405258
+        },
+        {
+          "Feature": "assignment_completion_pct",
+          "Importance": 0.0004302893103223848,
+          "Std": 0.0011679577937236242
+        }
+      ]
+    }
+  },
+  "ablation": {
+    "method": "Fresh in-memory clones of the saved full pipelines fit on the corresponding train split; evaluate on held-out test split. Model 2 default predict decision; PR-AUC uses FAIL probability.",
+    "model1": [
+      {
+        "configuration": "Full model",
+        "dropped_features": [],
+        "features_used": [
+          "CA_mark",
+          "MID_mark",
+          "attendance_percentage",
+          "study_hours_per_week",
+          "assignment_completion_pct",
+          "previous_sgpa",
+          "previous_cgpa",
+          "backlog_count",
+          "course_credits",
+          "course_type",
+          "branch",
+          "semester"
+        ],
+        "MAE": 5.65486118852561,
+        "RMSE": 7.089512420739615,
+        "R2": 0.757390134321228,
+        "delta_vs_full": {
+          "MAE": 0.0,
+          "RMSE": 0.0,
+          "R2": 0.0
+        }
+      },
+      {
+        "configuration": "Drop MID_mark only (CA-only equivalent)",
+        "dropped_features": [
+          "MID_mark"
+        ],
+        "features_used": [
+          "CA_mark",
+          "attendance_percentage",
+          "study_hours_per_week",
+          "assignment_completion_pct",
+          "previous_sgpa",
+          "previous_cgpa",
+          "backlog_count",
+          "course_credits",
+          "course_type",
+          "branch",
+          "semester"
+        ],
+        "MAE": 5.942766748840104,
+        "RMSE": 7.458516606522033,
+        "R2": 0.7314775234422093,
+        "delta_vs_full": {
+          "MAE": 0.28790556031449466,
+          "RMSE": 0.3690041857824182,
+          "R2": -0.02591261087901875
+        }
+      },
+      {
+        "configuration": "Drop all Assessments (pre-assessment baseline)",
+        "dropped_features": [
+          "CA_mark",
+          "MID_mark"
+        ],
+        "features_used": [
+          "attendance_percentage",
+          "study_hours_per_week",
+          "assignment_completion_pct",
+          "previous_sgpa",
+          "previous_cgpa",
+          "backlog_count",
+          "course_credits",
+          "course_type",
+          "branch",
+          "semester"
+        ],
+        "MAE": 8.34580973440649,
+        "RMSE": 10.45641391368767,
+        "R2": 0.47223418701346154,
+        "delta_vs_full": {
+          "MAE": 2.6909485458808806,
+          "RMSE": 3.366901492948056,
+          "R2": -0.2851559473077665
+        }
+      },
+      {
+        "configuration": "Drop Engagement / Behavioral",
+        "dropped_features": [
+          "attendance_percentage",
+          "study_hours_per_week",
+          "assignment_completion_pct"
+        ],
+        "features_used": [
+          "CA_mark",
+          "MID_mark",
+          "previous_sgpa",
+          "previous_cgpa",
+          "backlog_count",
+          "course_credits",
+          "course_type",
+          "branch",
+          "semester"
+        ],
+        "MAE": 5.661288958214269,
+        "RMSE": 7.096270541638713,
+        "R2": 0.7569273751978146,
+        "delta_vs_full": {
+          "MAE": 0.006427769688658991,
+          "RMSE": 0.00675812089909833,
+          "R2": -0.0004627591234134254
+        }
+      },
+      {
+        "configuration": "Drop Prior Academic History",
+        "dropped_features": [
+          "previous_sgpa",
+          "previous_cgpa",
+          "backlog_count"
+        ],
+        "features_used": [
+          "CA_mark",
+          "MID_mark",
+          "attendance_percentage",
+          "study_hours_per_week",
+          "assignment_completion_pct",
+          "course_credits",
+          "course_type",
+          "branch",
+          "semester"
+        ],
+        "MAE": 5.8272824535821,
+        "RMSE": 7.3018534753326705,
+        "R2": 0.7426394656842112,
+        "delta_vs_full": {
+          "MAE": 0.17242126505649047,
+          "RMSE": 0.21234105459305574,
+          "R2": -0.014750668637016795
+        }
+      }
+    ],
+    "model2": [
+      {
+        "configuration": "Full model",
+        "dropped_features": [],
+        "features_used": [
+          "CA_mark",
+          "MID_mark",
+          "attendance_percentage",
+          "study_hours_per_week",
+          "assignment_completion_pct",
+          "previous_sgpa",
+          "previous_cgpa",
+          "backlog_count",
+          "course_credits",
+          "branch",
+          "semester"
+        ],
+        "FAIL Recall": 0.9518716577540107,
+        "FAIL Precision": 0.1606015037593985,
+        "PR-AUC": 0.5849150073772301,
+        "ROC-AUC": 0.9912483616745048,
+        "delta_vs_full": {
+          "FAIL Recall": 0.0,
+          "FAIL Precision": 0.0,
+          "PR-AUC": 0.0,
+          "ROC-AUC": 0.0
+        }
+      },
+      {
+        "configuration": "Drop MID_mark only (CA-only equivalent)",
+        "dropped_features": [
+          "MID_mark"
+        ],
+        "features_used": [
+          "CA_mark",
+          "attendance_percentage",
+          "study_hours_per_week",
+          "assignment_completion_pct",
+          "previous_sgpa",
+          "previous_cgpa",
+          "backlog_count",
+          "course_credits",
+          "branch",
+          "semester"
+        ],
+        "FAIL Recall": 0.9340463458110517,
+        "FAIL Precision": 0.1451925741202549,
+        "PR-AUC": 0.5073280018628997,
+        "ROC-AUC": 0.988773841974519,
+        "delta_vs_full": {
+          "FAIL Recall": -0.017825311942959,
+          "FAIL Precision": -0.015408929639143587,
+          "PR-AUC": -0.0775870055143304,
+          "ROC-AUC": -0.0024745196999858
+        }
+      },
+      {
+        "configuration": "Drop all Assessments (pre-assessment baseline)",
+        "dropped_features": [
+          "CA_mark",
+          "MID_mark"
+        ],
+        "features_used": [
+          "attendance_percentage",
+          "study_hours_per_week",
+          "assignment_completion_pct",
+          "previous_sgpa",
+          "previous_cgpa",
+          "backlog_count",
+          "course_credits",
+          "branch",
+          "semester"
+        ],
+        "FAIL Recall": 0.9572192513368984,
+        "FAIL Precision": 0.10925737538148525,
+        "PR-AUC": 0.29141609380058453,
+        "ROC-AUC": 0.9821100485754213,
+        "delta_vs_full": {
+          "FAIL Recall": 0.005347593582887722,
+          "FAIL Precision": -0.051344128377913245,
+          "PR-AUC": -0.2934989135766456,
+          "ROC-AUC": -0.009138313099083528
+        }
+      },
+      {
+        "configuration": "Drop Engagement / Behavioral",
+        "dropped_features": [
+          "attendance_percentage",
+          "study_hours_per_week",
+          "assignment_completion_pct"
+        ],
+        "features_used": [
+          "CA_mark",
+          "MID_mark",
+          "previous_sgpa",
+          "previous_cgpa",
+          "backlog_count",
+          "course_credits",
+          "branch",
+          "semester"
+        ],
+        "FAIL Recall": 0.9607843137254902,
+        "FAIL Precision": 0.16113602391629298,
+        "PR-AUC": 0.605519668892439,
+        "ROC-AUC": 0.9917979263922876,
+        "delta_vs_full": {
+          "FAIL Recall": 0.0089126559714795,
+          "FAIL Precision": 0.0005345201568944802,
+          "PR-AUC": 0.0206046615152089,
+          "ROC-AUC": 0.00054956471778278
+        }
+      },
+      {
+        "configuration": "Drop Prior Academic History",
+        "dropped_features": [
+          "previous_sgpa",
+          "previous_cgpa",
+          "backlog_count"
+        ],
+        "features_used": [
+          "CA_mark",
+          "MID_mark",
+          "attendance_percentage",
+          "study_hours_per_week",
+          "assignment_completion_pct",
+          "course_credits",
+          "branch",
+          "semester"
+        ],
+        "FAIL Recall": 0.6987522281639929,
+        "FAIL Precision": 0.030022210308646703,
+        "PR-AUC": 0.35416312148431145,
+        "ROC-AUC": 0.876645298191768,
+        "delta_vs_full": {
+          "FAIL Recall": -0.2531194295900179,
+          "FAIL Precision": -0.13057929345075178,
+          "PR-AUC": -0.23075188589291867,
+          "ROC-AUC": -0.11460306348273686
+        }
+      }
+    ]
+  },
+  "threshold_cost_analysis": {
+    "n_test_rows": 69585,
+    "n_test_students": 1995,
+    "fail_rows": 561,
+    "positive_class": "FAIL (TARGET_PASS_FAIL == 0)",
+    "thresholds": [
+      0.1,
+      0.2,
+      0.3,
+      0.4,
+      0.5,
+      0.6,
+      0.7,
+      0.8
+    ],
+    "models": {
+      "full": {
+        "threshold_sweep": [
+          {
+            "threshold": 0.1,
+            "true_fails_caught_TP": 557,
+            "false_alerts_FP": 4740,
+            "missed_fails_FN": 4,
+            "FAIL_Recall": 0.9928698752228164,
+            "FAIL_Precision": 0.10515386067585426,
+            "false_alerts_per_true_fail": 8.509874326750449,
+            "pct_enrollments_flagged": 7.612272759933894,
+            "enrollments_flagged": 5297
+          },
+          {
+            "threshold": 0.2,
+            "true_fails_caught_TP": 553,
+            "false_alerts_FP": 4076,
+            "missed_fails_FN": 8,
+            "FAIL_Recall": 0.9857397504456328,
+            "FAIL_Precision": 0.11946424713761071,
+            "false_alerts_per_true_fail": 7.3707052441229655,
+            "pct_enrollments_flagged": 6.652295753395128,
+            "enrollments_flagged": 4629
+          },
+          {
+            "threshold": 0.3,
+            "true_fails_caught_TP": 547,
+            "false_alerts_FP": 3590,
+            "missed_fails_FN": 14,
+            "FAIL_Recall": 0.9750445632798574,
+            "FAIL_Precision": 0.1322214164853759,
+            "false_alerts_per_true_fail": 6.563071297989031,
+            "pct_enrollments_flagged": 5.945246820435439,
+            "enrollments_flagged": 4137
+          },
+          {
+            "threshold": 0.4,
+            "true_fails_caught_TP": 542,
+            "false_alerts_FP": 3169,
+            "missed_fails_FN": 19,
+            "FAIL_Recall": 0.966131907308378,
+            "FAIL_Precision": 0.14605227701428186,
+            "false_alerts_per_true_fail": 5.8468634686346865,
+            "pct_enrollments_flagged": 5.333045915067903,
+            "enrollments_flagged": 3711
+          },
+          {
+            "threshold": 0.5,
+            "true_fails_caught_TP": 534,
+            "false_alerts_FP": 2791,
+            "missed_fails_FN": 27,
+            "FAIL_Recall": 0.9518716577540107,
+            "FAIL_Precision": 0.1606015037593985,
+            "false_alerts_per_true_fail": 5.226591760299626,
+            "pct_enrollments_flagged": 4.77832866278652,
+            "enrollments_flagged": 3325
+          },
+          {
+            "threshold": 0.6,
+            "true_fails_caught_TP": 526,
+            "false_alerts_FP": 2441,
+            "missed_fails_FN": 35,
+            "FAIL_Recall": 0.9376114081996435,
+            "FAIL_Precision": 0.177283451297607,
+            "false_alerts_per_true_fail": 4.640684410646388,
+            "pct_enrollments_flagged": 4.263849967665445,
+            "enrollments_flagged": 2967
+          },
+          {
+            "threshold": 0.7,
+            "true_fails_caught_TP": 517,
+            "false_alerts_FP": 2030,
+            "missed_fails_FN": 44,
+            "FAIL_Recall": 0.9215686274509803,
+            "FAIL_Precision": 0.20298390263054575,
+            "false_alerts_per_true_fail": 3.9264990328820115,
+            "pct_enrollments_flagged": 3.660271610260832,
+            "enrollments_flagged": 2547
+          },
+          {
+            "threshold": 0.8,
+            "true_fails_caught_TP": 492,
+            "false_alerts_FP": 1497,
+            "missed_fails_FN": 69,
+            "FAIL_Recall": 0.8770053475935828,
+            "FAIL_Precision": 0.2473604826546003,
+            "false_alerts_per_true_fail": 3.042682926829268,
+            "pct_enrollments_flagged": 2.8583746497089892,
+            "enrollments_flagged": 1989
+          }
+        ],
+        "operating_points": {
+          "high_recall_screening_policy": {
+            "policy": "FAIL Recall >= 90%; among listed thresholds, minimize false alerts",
+            "selected": {
+              "threshold": 0.7,
+              "true_fails_caught_TP": 517,
+              "false_alerts_FP": 2030,
+              "missed_fails_FN": 44,
+              "FAIL_Recall": 0.9215686274509803,
+              "FAIL_Precision": 0.20298390263054575,
+              "false_alerts_per_true_fail": 3.9264990328820115,
+              "pct_enrollments_flagged": 3.660271610260832,
+              "enrollments_flagged": 2547
+            }
+          },
+          "capacity_constrained_counseling_policy": {
+            "policy": "Flag at most 2.0% of test enrollments; among listed thresholds, maximize FAIL Recall",
+            "max_flagged_enrollments": 1391,
+            "selected": {
+              "threshold": 0.8830893358443687,
+              "selection_method": "Lowest observed model score that flags no more than floor(2.0% of test enrollments; maximizes caught fails among score thresholds satisfying the capacity limit.",
+              "true_fails_caught_TP": 442,
+              "false_alerts_FP": 949,
+              "missed_fails_FN": 119,
+              "FAIL_Recall": 0.7878787878787878,
+              "FAIL_Precision": 0.3177570093457944,
+              "false_alerts_per_true_fail": 2.1470588235294117,
+              "pct_enrollments_flagged": 1.9989940360709921,
+              "enrollments_flagged": 1391
+            }
+          }
+        }
+      },
+      "CA-only": {
+        "threshold_sweep": [
+          {
+            "threshold": 0.1,
+            "true_fails_caught_TP": 556,
+            "false_alerts_FP": 5148,
+            "missed_fails_FN": 5,
+            "FAIL_Recall": 0.9910873440285205,
+            "FAIL_Precision": 0.09747545582047686,
+            "false_alerts_per_true_fail": 9.258992805755396,
+            "pct_enrollments_flagged": 8.197168930085507,
+            "enrollments_flagged": 5704
+          },
+          {
+            "threshold": 0.2,
+            "true_fails_caught_TP": 552,
+            "false_alerts_FP": 4439,
+            "missed_fails_FN": 9,
+            "FAIL_Recall": 0.983957219251337,
+            "FAIL_Precision": 0.11059907834101383,
+            "false_alerts_per_true_fail": 8.041666666666666,
+            "pct_enrollments_flagged": 7.172522813824818,
+            "enrollments_flagged": 4991
+          },
+          {
+            "threshold": 0.3,
+            "true_fails_caught_TP": 548,
+            "false_alerts_FP": 3942,
+            "missed_fails_FN": 13,
+            "FAIL_Recall": 0.9768270944741533,
+            "FAIL_Precision": 0.1220489977728285,
+            "false_alerts_per_true_fail": 7.193430656934306,
+            "pct_enrollments_flagged": 6.452540058920745,
+            "enrollments_flagged": 4490
+          },
+          {
+            "threshold": 0.4,
+            "true_fails_caught_TP": 540,
+            "false_alerts_FP": 3488,
+            "missed_fails_FN": 21,
+            "FAIL_Recall": 0.9625668449197861,
+            "FAIL_Precision": 0.13406156901688182,
+            "false_alerts_per_true_fail": 6.45925925925926,
+            "pct_enrollments_flagged": 5.78860386577567,
+            "enrollments_flagged": 4028
+          },
+          {
+            "threshold": 0.5,
+            "true_fails_caught_TP": 524,
+            "false_alerts_FP": 3085,
+            "missed_fails_FN": 37,
+            "FAIL_Recall": 0.9340463458110517,
+            "FAIL_Precision": 0.1451925741202549,
+            "false_alerts_per_true_fail": 5.887404580152672,
+            "pct_enrollments_flagged": 5.186462599698211,
+            "enrollments_flagged": 3609
+          },
+          {
+            "threshold": 0.6,
+            "true_fails_caught_TP": 513,
+            "false_alerts_FP": 2663,
+            "missed_fails_FN": 48,
+            "FAIL_Recall": 0.9144385026737968,
+            "FAIL_Precision": 0.16152392947103275,
+            "false_alerts_per_true_fail": 5.1910331384015596,
+            "pct_enrollments_flagged": 4.564202055040598,
+            "enrollments_flagged": 3176
+          },
+          {
+            "threshold": 0.7,
+            "true_fails_caught_TP": 497,
+            "false_alerts_FP": 2164,
+            "missed_fails_FN": 64,
+            "FAIL_Recall": 0.8859180035650623,
+            "FAIL_Precision": 0.18677189026681698,
+            "false_alerts_per_true_fail": 4.354124748490945,
+            "pct_enrollments_flagged": 3.8241000215563696,
+            "enrollments_flagged": 2661
+          },
+          {
+            "threshold": 0.8,
+            "true_fails_caught_TP": 470,
+            "false_alerts_FP": 1578,
+            "missed_fails_FN": 91,
+            "FAIL_Recall": 0.8377896613190731,
+            "FAIL_Precision": 0.2294921875,
+            "false_alerts_per_true_fail": 3.3574468085106384,
+            "pct_enrollments_flagged": 2.9431630380110656,
+            "enrollments_flagged": 2048
+          }
+        ],
+        "operating_points": {
+          "high_recall_screening_policy": {
+            "policy": "FAIL Recall >= 90%; among listed thresholds, minimize false alerts",
+            "selected": {
+              "threshold": 0.6,
+              "true_fails_caught_TP": 513,
+              "false_alerts_FP": 2663,
+              "missed_fails_FN": 48,
+              "FAIL_Recall": 0.9144385026737968,
+              "FAIL_Precision": 0.16152392947103275,
+              "false_alerts_per_true_fail": 5.1910331384015596,
+              "pct_enrollments_flagged": 4.564202055040598,
+              "enrollments_flagged": 3176
+            }
+          },
+          "capacity_constrained_counseling_policy": {
+            "policy": "Flag at most 2.0% of test enrollments; among listed thresholds, maximize FAIL Recall",
+            "max_flagged_enrollments": 1391,
+            "selected": {
+              "threshold": 0.8863143779487684,
+              "selection_method": "Lowest observed model score that flags no more than floor(2.0% of test enrollments; maximizes caught fails among score thresholds satisfying the capacity limit.",
+              "true_fails_caught_TP": 409,
+              "false_alerts_FP": 982,
+              "missed_fails_FN": 152,
+              "FAIL_Recall": 0.7290552584670231,
+              "FAIL_Precision": 0.29403306973400434,
+              "false_alerts_per_true_fail": 2.4009779951100243,
+              "pct_enrollments_flagged": 1.9989940360709921,
+              "enrollments_flagged": 1391
+            }
+          }
+        }
+      }
+    }
+  }
+}
