@@ -117,8 +117,8 @@ Not in v1 scope. All non-admin accounts are created by the Institution Admin, wh
 2. Always derive tenant and role from the decoded JWT
 3. Disabled users (`is_login_enabled = false`) must receive `401 Unauthorized` on login
 4. All database queries must filter by `institution_id` from the JWT
-5. JWT secret (`SECRET_KEY`) must be a strong random value in production; never commit to version control
-6. Use `Secure` cookie flag in production (HTTPS only)
+5. JWT secret (`SECRET_KEY`) must be ≥ 32 random bytes in production (enforced at startup); never commit to version control
+6. `COOKIE_SECURE` defaults to `true` in production (`ENVIRONMENT=production`); override only if you understand the risk
 7. Log failed login attempts with IP address (no password in logs)
 
 ## Related Documentation

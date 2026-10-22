@@ -11,7 +11,7 @@ Next.js (Vercel / Node host)  →  FastAPI (Railway / Fly / VPS)  →  Managed P
 ## Backend
 
 1. Provision PostgreSQL and set `DATABASE_URL`
-2. Set `SECRET_KEY` (32+ random bytes), `CORS_ORIGINS` (client URL), `COOKIE_SECURE=true`
+2. Set `ENVIRONMENT=production`, `SECRET_KEY` (≥ 32 random bytes), and `CORS_ORIGINS` (client URL). `COOKIE_SECURE` defaults to `true` in production.
 3. Deploy with uvicorn:
 
 ```bash

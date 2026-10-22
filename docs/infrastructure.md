@@ -17,11 +17,12 @@ All environment files are gitignored. Only `.env.example` is committed.
 | Variable | Required in | Description |
 |----------|------------|-------------|
 | `DATABASE_URL` | all | PostgreSQL connection string |
-| `SECRET_KEY` | all | JWT signing secret (32+ bytes in production) |
+| `SECRET_KEY` | all | JWT signing secret (must be ≥ 32 bytes in production; weak key logs a warning otherwise) |
 | `POSTGRES_USER` | development | Docker Compose Postgres user |
 | `POSTGRES_PASSWORD` | development | Docker Compose Postgres password |
 | `POSTGRES_DB` | development | Docker Compose Postgres database name |
-| `ENVIRONMENT` | all | `development`, `staging`, or `production` |
+| `ENVIRONMENT` | all | `development`, `test`, or `production` (default: `development`) |
+| `COOKIE_SECURE` | optional | Defaults to `true` in production, `false` otherwise; leave unset to follow `ENVIRONMENT` |
 | `SENTRY_DSN` | staging, production | Sentry error tracking DSN (optional) |
 | `CORS_ORIGINS` | all | Comma-separated allowed origins |
 

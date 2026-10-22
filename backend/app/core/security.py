@@ -66,5 +66,16 @@ def set_auth_cookies(response, user_id: str, role: str, institution_id: str) -> 
 
 
 def clear_auth_cookies(response) -> None:
-    response.delete_cookie("access_token")
-    response.delete_cookie("refresh_token")
+    response.delete_cookie(
+        "access_token",
+        httponly=True,
+        samesite="lax",
+        secure=settings.COOKIE_SECURE,
+    )
+    response.delete_cookie(
+        "refresh_token",
+        httponly=True,
+        samesite="lax",
+        secure=settings.COOKIE_SECURE,
+    )
+
