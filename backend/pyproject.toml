@@ -21,7 +21,7 @@ dependencies = [
     "python-multipart>=0.0.20",
     "pyjwt>=2.13.0",
     "python-dotenv>=1.2.3",
-    "scikit-learn==1.6.1",
+    "scikit-learn==1.9.1",
     "slowapi>=0.1.10",
     "sqlalchemy>=2.0.52",
     "uvicorn>=0.52.4",
