@@ -56,3 +56,7 @@ npm-debug.log*
 
 # Docker
 docker-compose.override.yml
+
+# Database dumps
+*.sql
+seeded_db_dump.sql
