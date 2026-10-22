@@ -16,6 +16,21 @@ _RECOMMENDATIONS: dict[str, str] = {
     "low_ca": "Focus on internal assessments and continuous preparation.",
     "low_mid": "Strengthen preparation before major assessments.",
 }
+_LIMITED_DATA_MESSAGE = (
+    "Limited academic history is recorded, so this assessment may change as more "
+    "records are added."
+)
+
+_FEATURE_TO_RECOMMENDATION = {
+    "attendance_percentage": "low_attendance",
+    "previous_cgpa": "low_cgpa",
+    "backlog_count": "backlogs",
+    "current_failed_courses": "failed_courses",
+    "low_performance_course_count": "low_performance_courses",
+    "study_hours_per_week": "low_study_hours",
+    "assignment_completion_percentage": "low_assignment_completion",
+    "performance_trend": "declining_performance",
+}
 
 
 def detect_risk_factors(features: dict[str, Any]) -> list[str]:
@@ -69,7 +84,11 @@ def detect_risk_factors(features: dict[str, Any]) -> list[str]:
     return factors
 
 
-def generate_recommendations(features: dict[str, Any]) -> list[str]:
+def generate_recommendations(
+    features: dict[str, Any],
+    top_factors: list[dict[str, Any]] | None = None,
+    data_completeness: float | None = None,
+) -> list[str]:
     """Generate actionable recommendations based on detected factors."""
     recs: list[str] = []
 
@@ -114,5 +133,29 @@ def generate_recommendations(features: dict[str, Any]) -> list[str]:
     mid = features.get("MID_mark")
     if mid is not None and float(mid) < 50:
         recs.append(_RECOMMENDATIONS["low_mid"])
+
+    if top_factors is not None:
+        recommendation_order = {
+            _FEATURE_TO_RECOMMENDATION[factor["feature"]]: index
+            for index, factor in enumerate(top_factors)
+            if not factor.get("is_missing", False)
+            and factor.get("feature") in _FEATURE_TO_RECOMMENDATION
+        }
+        recs.sort(
+            key=lambda recommendation: recommendation_order.get(
+                next(
+                    (
+                        key
+                        for key, text in _RECOMMENDATIONS.items()
+                        if text == recommendation
+                    ),
+                    "",
+                ),
+                len(recommendation_order),
+            )
+        )
+
+    if data_completeness is not None and data_completeness < 0.5:
+        recs.append(_LIMITED_DATA_MESSAGE)
 
     return recs

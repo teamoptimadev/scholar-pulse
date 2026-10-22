@@ -135,7 +135,12 @@ def predict_for_student(
     db.refresh(prediction)
 
     from app.ml.model_loader import model_loader
-    from app.ml.risk_engine import compute_feature_contributions, get_top_factors
+    from app.ml.risk_engine import (
+        compute_data_completeness,
+        compute_feature_contributions,
+        get_top_factors,
+    )
+    from app.services.recommendation_service import generate_recommendations
 
     features_dict = prediction.input_features or {}
     config = model_loader.risk_config
@@ -150,6 +155,11 @@ def predict_for_student(
         pass
         
     top_factors = get_top_factors(features_dict, config)
+    recommendations = generate_recommendations(
+        features_dict,
+        top_factors=top_factors,
+        data_completeness=compute_data_completeness(features_dict, config),
+    )
 
     return AllPredictionsResponse(
         student_id=body.student_id,
@@ -165,7 +175,7 @@ def predict_for_student(
             risk_score=stored_score,
             risk_level=prediction.risk_level or "LOW",
             risk_factors=_as_string_list(prediction.risk_factors),
-            recommendations=_as_string_list(prediction.recommendations),
+            recommendations=recommendations,
             top_factors=top_factors,
         ),
     )

@@ -5,6 +5,7 @@ from __future__ import annotations
 from typing import Any
 
 from app.ml.model_loader import model_loader
+from app.services.recommendation_service import generate_recommendations
 
 RISK_FEATURES = [
     "attendance_percentage",
@@ -154,4 +155,9 @@ def predict_risk(features: dict[str, Any]) -> dict[str, Any]:
         "risk_level": level,
         "data_completeness": completeness,
         "top_factors": top_factors,
+        "recommendations": generate_recommendations(
+            features,
+            top_factors=top_factors,
+            data_completeness=completeness,
+        ),
     }
