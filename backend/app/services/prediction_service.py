@@ -14,8 +14,7 @@ from app.services.recommendation_service import (
 
 
 def predict_performance_only(features: dict[str, Any]) -> dict[str, Any]:
-    predicted = predict_performance(features)
-    return {"predicted_end_marks": predicted}
+    return predict_performance(features)
 
 
 def predict_pass_fail_only(features: dict[str, Any]) -> dict[str, Any]:

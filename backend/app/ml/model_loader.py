@@ -16,7 +16,9 @@ class ModelLoader:
 
     def __init__(self) -> None:
         self.performance_model: Any = None
+        self.performance_model_ca_only: Any = None
         self.pass_fail_model: Any = None
+        self.pass_fail_model_ca_only: Any = None
         self.risk_config: dict[str, Any] = {}
         self._loaded = False
 
@@ -25,10 +27,18 @@ class ModelLoader:
         base = Path(models_dir or settings.ML_MODELS_DIR)
 
         model1_path = base / "model1_endterm_histgradientboosting.pkl"
+        model1_ca_only_path = base / "model1_endterm_ca_only_histgradientboosting.pkl"
         model2_path = base / "model2_pass_fail_histgradientboosting.pkl"
+        model2_ca_only_path = base / "model2_pass_fail_ca_only_histgradientboosting.pkl"
         risk_config_path = base / "model3_risk_engine_config.json"
 
-        required = [model1_path, model2_path, risk_config_path]
+        required = [
+            model1_path,
+            model1_ca_only_path,
+            model2_path,
+            model2_ca_only_path,
+            risk_config_path,
+        ]
         missing = [str(p) for p in required if not p.exists()]
         if missing:
             raise FileNotFoundError(
@@ -36,7 +46,9 @@ class ModelLoader:
             )
 
         self.performance_model = joblib.load(model1_path)
+        self.performance_model_ca_only = joblib.load(model1_ca_only_path)
         self.pass_fail_model = joblib.load(model2_path)
+        self.pass_fail_model_ca_only = joblib.load(model2_ca_only_path)
         with open(risk_config_path, encoding="utf-8") as f:
             self.risk_config = json.load(f)
 

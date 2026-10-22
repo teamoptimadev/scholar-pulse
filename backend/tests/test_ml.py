@@ -19,7 +19,9 @@ class TestModelLoading:
         from app.ml.model_loader import model_loader
         assert model_loader.is_loaded
         assert model_loader.performance_model is not None
+        assert model_loader.performance_model_ca_only is not None
         assert model_loader.pass_fail_model is not None
+        assert model_loader.pass_fail_model_ca_only is not None
         assert model_loader.risk_config is not None
 
 
@@ -33,7 +35,31 @@ class TestModel1:
             "course_credits": 3, "course_type": "THEORY", "branch": "CSE", "semester": 5,
         }
         result = predict_performance(features)
-        assert 0 <= result <= 100
+        assert 0 <= result["predicted_end_marks"] <= 100
+        assert result["model_stage"] == "full"
+
+    def test_missing_mid_routes_to_ca_only_model(self):
+        from app.ml.model1 import predict_performance
+
+        features = {
+            "CA_mark": 35.0, "MID_mark": None, "attendance_percentage": 85,
+            "study_hours_per_week": 15, "assignment_completion_pct": 90,
+            "previous_sgpa": 7.5, "previous_cgpa": 7.2, "backlog_count": 0,
+            "course_credits": 3, "course_type": "THEORY", "branch": "CSE", "semester": 5,
+        }
+        result = predict_performance(features)
+        assert result["model_stage"] == "ca_only"
+        assert result["predicted_end_marks"] > 0
+
+        full_result = predict_performance({**features, "MID_mark": 0.0})
+        assert result["predicted_end_marks"] > full_result["predicted_end_marks"] + 1.0
+
+    def test_missing_ca_and_mid_handles_nan(self):
+        from app.ml.model1 import predict_performance
+
+        result = predict_performance({"CA_mark": None, "MID_mark": None})
+        assert 0 <= result["predicted_end_marks"] <= 100
+        assert result["model_stage"] == "ca_only"
 
 
 class TestModel2:
@@ -49,6 +75,29 @@ class TestModel2:
         assert result["prediction"] in ("PASS", "FAIL")
         assert 0 <= result["pass_probability"] <= 1
         assert 0 <= result["fail_probability"] <= 1
+        assert result["model_stage"] == "full"
+
+    def test_missing_mid_routes_to_ca_only_model(self):
+        from app.ml.model2 import predict_pass_fail
+
+        features = {
+            "CA_mark": 35.0, "MID_mark": None, "attendance_percentage": 85,
+            "study_hours_per_week": 15, "assignment_completion_pct": 90,
+            "previous_sgpa": 7.5, "previous_cgpa": 7.2, "backlog_count": 0,
+            "course_credits": 3, "branch": "CSE", "semester": 5,
+        }
+        result = predict_pass_fail(features)
+        assert result["model_stage"] == "ca_only"
+
+        full_result = predict_pass_fail({**features, "MID_mark": 0.0})
+        assert result["pass_probability"] > full_result["pass_probability"]
+
+    def test_missing_ca_and_mid_handles_nan(self):
+        from app.ml.model2 import predict_pass_fail
+
+        result = predict_pass_fail({"CA_mark": None, "MID_mark": None})
+        assert result["prediction"] in ("PASS", "FAIL")
+        assert result["model_stage"] == "ca_only"
 
 
 class TestModel3Risk:

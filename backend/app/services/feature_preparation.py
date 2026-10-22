@@ -29,8 +29,8 @@ def build_features_from_enrollment(
     student = enrollment.student
     course = enrollment.course
 
-    ca_mark = 0.0
-    mid_mark = 0.0
+    ca_mark = None
+    mid_mark = None
     for mark in enrollment.assessment_marks:
         atype = mark.assessment.assessment_type.upper()
         if atype == "CA":
@@ -122,8 +122,8 @@ def build_features_from_student(
     )
 
     return {
-        "CA_mark": 0.0,
-        "MID_mark": 0.0,
+        "CA_mark": None,
+        "MID_mark": None,
         "attendance_percentage": 0.0,
         "study_hours_per_week": 0.0,
         "assignment_completion_pct": 0.0,

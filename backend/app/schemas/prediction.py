@@ -7,7 +7,7 @@ from pydantic import BaseModel, Field
 
 class PerformanceFeatures(BaseModel):
     CA_mark: float = Field(..., ge=0, le=100)
-    MID_mark: float = Field(..., ge=0, le=100)
+    MID_mark: float | None = Field(default=None, ge=0, le=100)
     attendance_percentage: float = Field(..., ge=0, le=100)
     study_hours_per_week: float = Field(..., ge=0, le=60)
     assignment_completion_pct: float = Field(..., ge=0, le=100)
@@ -22,7 +22,7 @@ class PerformanceFeatures(BaseModel):
 
 class PassFailFeatures(BaseModel):
     CA_mark: float = Field(..., ge=0, le=100)
-    MID_mark: float = Field(..., ge=0, le=100)
+    MID_mark: float | None = Field(default=None, ge=0, le=100)
     attendance_percentage: float = Field(..., ge=0, le=100)
     study_hours_per_week: float = Field(..., ge=0, le=60)
     assignment_completion_pct: float = Field(..., ge=0, le=100)
@@ -47,12 +47,14 @@ class RiskFeatures(BaseModel):
 
 class PerformancePredictionResponse(BaseModel):
     predicted_end_marks: float
+    model_stage: str = "full"
 
 
 class PassFailPredictionResponse(BaseModel):
     prediction: str
     pass_probability: float
     fail_probability: float
+    model_stage: str = "full"
 
 
 class RiskFactor(BaseModel):

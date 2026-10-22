@@ -21,6 +21,7 @@ MODEL2_FEATURES = [
     "branch",
     "semester",
 ]
+MODEL2_CA_ONLY_FEATURES = [feature for feature in MODEL2_FEATURES if feature != "MID_mark"]
 
 # Training labels: 0 = FAIL, 1 = PASS
 _LABEL_MAP = {0: "FAIL", 1: "PASS"}
@@ -31,9 +32,11 @@ def predict_pass_fail(features: dict[str, Any]) -> dict[str, Any]:
     if not model_loader.is_loaded:
         raise RuntimeError("ML models not loaded")
 
-    row = {f: features.get(f) for f in MODEL2_FEATURES}
+    has_mid_mark = features.get("MID_mark") is not None
+    feature_names = MODEL2_FEATURES if has_mid_mark else MODEL2_CA_ONLY_FEATURES
+    model = model_loader.pass_fail_model if has_mid_mark else model_loader.pass_fail_model_ca_only
+    row = {f: features.get(f) for f in feature_names}
     df = pd.DataFrame([row])
-    model = model_loader.pass_fail_model
 
     pred_class = int(model.predict(df)[0])
     proba = model.predict_proba(df)[0]
@@ -49,4 +52,5 @@ def predict_pass_fail(features: dict[str, Any]) -> dict[str, Any]:
         "prediction": _LABEL_MAP.get(pred_class, "FAIL"),
         "pass_probability": pass_prob,
         "fail_probability": fail_prob,
+        "model_stage": "full" if has_mid_mark else "ca_only",
     }
