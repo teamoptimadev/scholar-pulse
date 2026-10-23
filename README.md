@@ -45,7 +45,7 @@ FastAPI Backend (uv)
         ↓
 PostgreSQL
         ↓
-ML Prediction Layer (Pickle models)
+ML Prediction Layer (versioned model artifacts)
 ```
 
 Each institution operates as an independent tenant with backend-enforced data isolation.
@@ -84,6 +84,16 @@ Three components trained on the synthetic CBCS university dataset:
 1. **Performance Prediction** — end-term marks from 0-100 via HistGradientBoostingRegressor
 2. **Pass/Fail Prediction** — PASS/FAIL classification with probabilities via HistGradientBoostingClassifier, tuned for FAIL recall
 3. **At-Risk Detection** — versioned rule-based weighted risk engine (not ML)
+
+Current held-out results:
+
+| Component | Metrics |
+|-----------|---------|
+| Model 1 — end-term marks | MAE 5.6549 · RMSE 7.0895 · R² 0.7574 |
+| Model 2 — pass/fail | FAIL recall 0.9519 · FAIL precision 0.1606 · ROC-AUC 0.9912 |
+| Model 3 — risk engine | Accuracy 74.85% · macro F1 70.78% |
+
+Model 2's test-set FAIL rate is 0.81%, so its precision/recall trade-off should be considered alongside its always-PASS accuracy of 0.9919. These synthetic-dataset results are not guarantees of institutional performance. See [ML evaluation](docs/ml-evaluation.md) for test-set details and caveats.
 
 See [docs/ml-pipeline.md](docs/ml-pipeline.md) and [ml/README.md](ml/README.md).
 

@@ -7,28 +7,31 @@ Project: **ScholarPulse** — academic performance monitoring and institutional 
 ### Model 1 — Student Performance Prediction
 
 - **Type:** Regression
-- **Algorithm:** `HistGradientBoostingRegressor` (sklearn `Pipeline`)
-- **Artifact:** `models/model_1/performance_model.pkl`
-- **Output:** Predicted final grade (`G3`)
+- **Algorithm:** `HistGradientBoostingRegressor`
+- **Artifact:** `models/model1_endterm_histgradientboosting.pkl`
+- **Output:** Predicted end-term marks on a 0–100 scale
+- **Student-level test metrics:** MAE 5.6549, RMSE 7.0895, R² 0.7574
 
 ### Model 2 — Student Pass/Fail Prediction
 
 - **Type:** Binary classification
-- **Algorithm:** `LogisticRegression` (sklearn `Pipeline`)
-- **Artifact:** `models/model_2/pass_fail_model.pkl`
+- **Algorithm:** `HistGradientBoostingClassifier`
+- **Artifact:** `models/model2_pass_fail_histgradientboosting.pkl`
 - **Output:** `PASS` / `FAIL` with probabilities
+- **Student-level test metrics:** FAIL precision 0.1606, FAIL recall 0.9519, ROC-AUC 0.9912, PR-AUC 0.5849
 
 ### Model 3 — Student At-Risk Detection / Risk Assessment
 
 - **Type:** Rule-based weighted scoring engine (not ML)
-- **Configuration:** `models/model_3/risk_engine_config.json`
-- **Output:** Risk score (0–100), risk level, indicators
+- **Configuration:** `models/model3_risk_engine_config.json` (policy v1.1)
+- **Output:** Risk score (0–100), risk level, data completeness, and top contributing factors
+- **Evaluation:** Accuracy 74.85%, macro F1 70.78%, HIGH-risk precision 78.03%, HIGH-risk recall 67.12% (derived from the confusion matrix)
 
 ## Purpose
 
-This folder contains training notebooks, trained model artifacts, inference code, and documentation for the three academic intelligence components. It is designed for integration with the FastAPI backend.
+This folder contains the CBCS training script, versioned model artifacts, and evaluation outputs for the three academic intelligence components. Inference is integrated into the FastAPI backend.
 
-**Authoritative documentation:** [`ml/docs/`](docs/README.md). Root-level `docs/ml-pipeline.md` describes an earlier planned pipeline and may not match this implementation.
+The models use the synthetic CBCS datasets in `university_data/`. Metrics are student-level held-out results for Models 1 and 2, and agreement with independent synthetic reference labels for Model 3; they are not guarantees of institutional performance.
 
 ## Setup
 
@@ -46,23 +49,17 @@ ml/
 ├── README.md
 ├── requirements.txt
 ├── pyproject.toml
-├── docs/                 # Model and pipeline documentation
-├── notebooks/
-│   ├── model_1/performance_model.ipynb
-│   ├── model_2/pass_fail_model.ipynb
-│   └── model_3/risk_model.ipynb
 ├── models/
-│   ├── model_1/performance_model.pkl
-│   ├── model_2/pass_fail_model.pkl
-│   └── model_3/risk_engine_config.json
-├── src/                  # Inference code
-├── data/raw/             # UCI student-mat.csv
-└── tests/
+│   ├── model1_endterm_histgradientboosting.pkl
+│   ├── model2_pass_fail_histgradientboosting.pkl
+│   ├── model3_risk_engine_config.json
+│   ├── *_metrics.json, *_feature_importance.csv
+│   └── student_results_dataset_and_models_training.py
 ```
 
 ## Dataset
 
-The current Model 1 and Model 2 artifacts are trained on the simulated CBCS datasets in `university_data/`. Some legacy notebooks and documentation also reference the UCI Student Performance Dataset (`data/raw/student-mat.csv`); that dataset is not the input to the current CBCS training script.
+The current Model 1 and Model 2 artifacts are trained on the simulated CBCS datasets in `university_data/`. Legacy project material may refer to the UCI Student Performance Dataset; it is not the input to the current CBCS training script.
 
 ## Dataset sizes
 
@@ -98,22 +95,9 @@ Both models use student-level splits so a student's course rows cannot occur in 
 
 ## Frozen metrics
 
-The following table compares the previous row-level evaluation with the new student-level evaluation. The Model 2 before/after rows use each model's respective test set; accuracy is accompanied by the always-PASS baseline to make the class imbalance visible.
+Current student-level held-out metrics are listed above and stored in `models/model1_metrics.json` and `models/model2_metrics.json`. Model 1's test set contains 53,971 rows from 2,000 students. Model 2's test set contains 69,585 rows from 1,995 students, including 561 FAIL rows. The Model 2 always-PASS accuracy is 0.9919, higher than its 0.9595 classifier accuracy because FAILs represent only 0.81% of the test set; FAIL recall and PR-AUC provide additional context for this imbalance.
 
-| Model / metric | Before (row-level) | After (student-level) |
-|----------------|-------------------:|----------------------:|
-| Model 1 test rows | 53,937 | 53,971 |
-| Model 1 MAE | 5.6312 | 5.6549 |
-| Model 1 RMSE | 7.0712 | 7.0895 |
-| Model 1 R² | 0.7636 | 0.7574 |
-| Model 2 test rows | 69,549 | 69,585 |
-| Model 2 accuracy | 0.9533 | 0.9595 |
-| Model 2 always-PASS accuracy | 0.9908 | 0.9919 |
-| Model 2 FAIL precision | 0.1614 | 0.1606 |
-| Model 2 FAIL recall | 0.9673 | 0.9519 |
-| Model 2 FAIL F1 | 0.2767 | 0.2748 |
-| Model 2 ROC-AUC | 0.9906 | 0.9912 |
-| Model 2 PR-AUC | Not recorded | 0.5849 |
+Model 3 was evaluated on 77,050 records against independently generated synthetic reference labels. Its class order for the confusion matrix is LOW, MEDIUM, HIGH. Full metrics are in `models/model3_metrics.json`.
 
 ## CA-only variants
 
@@ -144,46 +128,24 @@ RUN_CA_ONLY_RETRAIN=1 uv run python ../ml/models/student_results_dataset_and_mod
 
 ## Inference
 
-```python
-from src.model_1.predictor import predict_performance
-from src.model_2.predictor import predict_pass_fail
-from src.model_3.risk_engine import assess_student_risk
-
-# Model 1 — 32 UCI features (see src/common/features.py)
-result = predict_performance(student_dict)
-# {"predicted_g3": 13.7}
-
-# Model 2 — same 32 features
-result = predict_pass_fail(student_dict)
-# {"prediction": "PASS", "pass_probability": 0.99, "fail_probability": 0.01}
-
-# Model 3 — 5 risk fields
-result = assess_student_risk({
-    "absences": 6, "G1": 10, "G2": 9, "failures": 1, "studytime": 2
-})
-# {"risk_score": 47.5, "risk_level": "MEDIUM", "risk_indicators": [...], ...}
-```
-
-See [`docs/inference.md`](docs/inference.md) for input/output contracts and backend integration notes.
+Inference is implemented in `backend/app/ml/`. Models 1 and 2 accept the CBCS features documented in their backend modules and use the full model when `MID_mark` is present, otherwise the CA-only artifact. The Model 3 backend loads the versioned JSON risk policy. See [the ML pipeline](../docs/ml-pipeline.md) and [the API reference](../docs/backend-api.md) for input/output contracts.
 
 ## Tests
 
 ```bash
-uv run pytest tests/ -v
+cd backend
+uv run pytest tests/test_ml.py
 ```
 
 ## Documentation
 
 | Document | Description |
 |----------|-------------|
-| [docs/ml_architecture.md](docs/ml_architecture.md) | Architecture overview |
-| [docs/models_overview.md](docs/models_overview.md) | Component comparison |
-| [docs/model_1_performance.md](docs/model_1_performance.md) | Model 1 details |
-| [docs/model_2_pass_fail.md](docs/model_2_pass_fail.md) | Model 2 details |
-| [docs/model_3_risk_assessment.md](docs/model_3_risk_assessment.md) | Model 3 risk engine |
-| [docs/data_pipeline.md](docs/data_pipeline.md) | Data loading and preprocessing |
-| [docs/model_evaluation.md](docs/model_evaluation.md) | Evaluation metrics |
-| [docs/inference.md](docs/inference.md) | Inference API |
+| [ML pipeline](../docs/ml-pipeline.md) | Artifacts, model inputs, outputs, and backend integration |
+| [ML evaluation](../docs/ml-evaluation.md) | Splits, metrics, and evaluation caveats |
+| [Dataset strategy](../docs/dataset.md) | Dataset strategy |
+| [Dataset documentation](models/dataset_documentation.md) | Generated training dataset details |
+| [Data quality report](models/data_quality_report.md) | Dataset quality checks |
 
 ## Feature Importance, Ablation, and Threshold-Cost Analysis
 

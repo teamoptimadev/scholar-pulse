@@ -46,15 +46,17 @@ Model 3 is **not** an ML classifier. It is the transparent weighted risk engine 
 
 ### Evaluation Metrics
 
-| Level | Count | % |
-|-------|-------|---|
-| Accuracy | 0.824 |
-| Macro precision | 0.7982 |
-| Macro recall | 0.7621 |
-| Macro F1 | 0.7795 |
-| HIGH precision | 0.8124 |
-| HIGH recall | 0.6988 |
-| HIGH F1 | 0.7512 |
+| Metric | Matrix-derived value |
+|--------|----------------------:|
+| Accuracy | 74.85% |
+| Macro precision | 72.62% |
+| Macro recall | 69.23% |
+| Macro F1 | 70.78% |
+| HIGH precision | 78.03% |
+| HIGH recall | 67.12% |
+| HIGH F1 | 72.16% |
+
+Metrics are calculated from the confusion matrix in `ml/models/model3_metrics.json` (class order: LOW, MEDIUM, HIGH). The values measure agreement with independent synthetic reference labels; they are not calibrated probabilities.
 
 ### Validation
 

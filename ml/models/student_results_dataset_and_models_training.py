@@ -4297,6 +4297,37 @@ print("Saved:", config_path)
 # CELL 11: SAVE EVALUATION METRICS
 # ============================================
 
+cm_diagonal = np.diag(cm_risk)
+cm_rows = cm_risk.sum(axis=1)
+cm_columns = cm_risk.sum(axis=0)
+class_precision = np.divide(
+    cm_diagonal,
+    cm_columns,
+    out=np.zeros_like(cm_diagonal, dtype=float),
+    where=cm_columns != 0
+)
+class_recall = np.divide(
+    cm_diagonal,
+    cm_rows,
+    out=np.zeros_like(cm_diagonal, dtype=float),
+    where=cm_rows != 0
+)
+class_f1 = np.divide(
+    2 * class_precision * class_recall,
+    class_precision + class_recall,
+    out=np.zeros_like(class_precision, dtype=float),
+    where=(class_precision + class_recall) != 0
+)
+risk_accuracy = cm_diagonal.sum() / cm_risk.sum()
+risk_precision = class_precision.mean()
+risk_recall = class_recall.mean()
+risk_f1 = class_f1.mean()
+high_precision, high_recall, high_f1 = (
+    class_precision[2],
+    class_recall[2],
+    class_f1[2]
+)
+
 risk_metrics = {
     "model_name": "Weighted Risk Scoring Engine",
     "model_type": "rule_based_risk_engine",
@@ -4309,14 +4340,14 @@ risk_metrics = {
     },
 
     "metrics": {
-        "accuracy": float(risk_accuracy),
-        "macro_precision": float(risk_precision),
-        "macro_recall": float(risk_recall),
-        "macro_f1": float(risk_f1),
+        "accuracy": round(float(risk_accuracy), 4),
+        "macro_precision": round(float(risk_precision), 4),
+        "macro_recall": round(float(risk_recall), 4),
+        "macro_f1": round(float(risk_f1), 4),
 
-        "high_risk_precision": float(high_precision),
-        "high_risk_recall": float(high_recall),
-        "high_risk_f1": float(high_f1)
+        "high_risk_precision": round(float(high_precision), 4),
+        "high_risk_recall": round(float(high_recall), 4),
+        "high_risk_f1": round(float(high_f1), 4)
     },
 
     "confusion_matrix": cm_risk.tolist(),

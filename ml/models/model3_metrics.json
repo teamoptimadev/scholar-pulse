@@ -7,13 +7,13 @@
         "HIGH": 38.0
     },
     "metrics": {
-        "accuracy": 0.824,
-        "macro_precision": 0.7982,
-        "macro_recall": 0.7621,
-        "macro_f1": 0.7795,
-        "high_risk_precision": 0.8124,
-        "high_risk_recall": 0.6988,
-        "high_risk_f1": 0.7512
+        "accuracy": 0.7485,
+        "macro_precision": 0.7262,
+        "macro_recall": 0.6923,
+        "macro_f1": 0.7078,
+        "high_risk_precision": 0.7803,
+        "high_risk_recall": 0.6712,
+        "high_risk_f1": 0.7216
     },
     "confusion_matrix": [
         [

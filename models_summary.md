@@ -224,17 +224,17 @@ Each top factor contains `feature`, `contribution`, `value`, and `is_missing`. O
 
 The engine was evaluated against independently generated synthetic reference labels on 77,050 records. Metrics are taken directly from `ml/models/model3_metrics.json`:
 
-| Metric | Value |
+| Metric | Matrix-derived value |
 |---|---:|
-| Accuracy | 0.824 |
-| Macro precision | 0.7982 |
-| Macro recall | 0.7621 |
-| Macro F1 | 0.7795 |
-| HIGH precision | 0.8124 |
-| HIGH recall | 0.6988 |
-| HIGH F1 | 0.7512 |
+| Accuracy | 74.85% |
+| Macro precision | 72.62% |
+| Macro recall | 69.23% |
+| Macro F1 | 70.78% |
+| HIGH precision | 78.03% |
+| HIGH recall | 67.12% |
+| HIGH F1 | 72.16% |
 
-The class order for its confusion matrix is LOW, MEDIUM, HIGH (see `ml/models/model3_metrics.json`). These scores evaluate agreement with independent synthetic reference labels; they are not calibrated probabilities.
+The matrix-derived values use class order LOW, MEDIUM, HIGH (see `ml/models/model3_metrics.json`). They evaluate agreement with independent synthetic reference labels; they are not calibrated probabilities.
 
 ## Model Artifact
 
