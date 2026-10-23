@@ -19,7 +19,11 @@ export default function AdminDashboardPage() {
   const { data: risk } = useRiskDistribution();
 
   return (
-    
+    <div className="space-y-6">
+      <PageHeader
+        title="Institutional Dashboard"
+        description="Overview of academic performance and risk across Demo University."
+      />
 
       {isLoading && <LoadingState />}
       {error && (
