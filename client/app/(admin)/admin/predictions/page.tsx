@@ -66,7 +66,7 @@ export default function AdminPredictionsPage() {
           </Button>
           {isPending && <LoadingState />}
           {error && <EmptyState title="Prediction failed" />}
-          {data && <PredictionCard predictions={data} />}
+          {data && <PredictionCard predictions={data} showDetails />}
         </TabsContent>
       </Tabs>
     </div>

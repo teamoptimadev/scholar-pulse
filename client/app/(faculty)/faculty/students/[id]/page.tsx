@@ -38,7 +38,7 @@ export default function FacultyStudentDetailPage() {
           </Button>
         </div>
       )}
-      {prediction && <PredictionCard predictions={prediction} />}
+      {prediction && <PredictionCard predictions={prediction} showDetails />}
     </div>
   );
 }

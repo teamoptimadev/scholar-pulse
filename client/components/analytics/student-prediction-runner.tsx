@@ -82,7 +82,7 @@ export function StudentPredictionRunner({
         </p>
       )}
       {error && <ErrorState description="Prediction failed for selected student." />}
-      {prediction && <PredictionCard predictions={prediction} />}
+      {prediction && <PredictionCard predictions={prediction} showDetails />}
     </div>
   );
 }

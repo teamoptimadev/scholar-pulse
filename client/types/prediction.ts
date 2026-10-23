@@ -15,12 +15,21 @@ export interface PerformanceFeatures {
 
 export interface PerformancePrediction {
   predicted_end_marks: number;
+  model_variant?: "full" | "ca_only";
 }
 
 export interface PassFailPrediction {
   prediction: string;
   pass_probability: number;
   fail_probability: number;
+  model_variant?: "full" | "ca_only";
+}
+
+export interface RiskFactor {
+  feature: string;
+  contribution: number;
+  value: number | string | null;
+  is_missing: boolean;
 }
 
 export interface RiskPrediction {
@@ -28,6 +37,8 @@ export interface RiskPrediction {
   risk_level: "LOW" | "MEDIUM" | "HIGH";
   risk_factors: string[];
   recommendations: string[];
+  data_completeness?: number;
+  top_factors?: RiskFactor[];
 }
 
 export interface AllPredictions {
