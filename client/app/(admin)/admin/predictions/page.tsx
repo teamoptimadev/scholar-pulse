@@ -14,20 +14,7 @@ import { usePredictAll } from "@/hooks/use-predictions";
 
 export default function AdminPredictionsPage() {
   const { mutate, data, isPending, error } = usePredictAll();
-  const [form, setForm] = useState({
-    CA_mark: 75,
-    MID_mark: 70,
-    attendance_percentage: 85,
-    study_hours_per_week: 15,
-    assignment_completion_pct: 90,
-    previous_sgpa: 7.5,
-    previous_cgpa: 7.2,
-    backlog_count: 0,
-    course_credits: 3,
-    course_type: "THEORY",
-    branch: "CSE",
-    semester: 5,
-  });
+  
 
   return (
     <div className="space-y-6">
