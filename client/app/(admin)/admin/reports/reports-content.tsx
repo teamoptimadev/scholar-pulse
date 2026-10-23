@@ -39,7 +39,11 @@ export function AdminReportsContent() {
     setAppliedFilters(draftFilters);
   }, [draftFilters, router]);
 
-  
+  const resetFilters = useCallback(() => {
+    router.replace("/admin/reports");
+    setDraftFilters({});
+    setAppliedFilters({});
+  }, [router]);
 
   return (
     <div className="space-y-6">
